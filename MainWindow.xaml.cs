@@ -146,9 +146,14 @@ namespace Microsoft.Samples.Kinect.DepthBasics
         private int displayHeight;
 
         /// <summary>
-        /// Right palm position in colorMap coordinates
+        /// Right palm position in depthMap coordinates
         /// </summary>
         private Point rPalmPos;
+
+        /// <summary>
+        /// Right wrist position in depthMap coordinates
+        /// </summary>
+        private Point rWristPos;
 
 
 
@@ -196,8 +201,22 @@ namespace Microsoft.Samples.Kinect.DepthBasics
             // allocate space to put the pixels being received and converted
             this.depthPixels = new byte[this.depthFrameDescription.Width * this.depthFrameDescription.Height];
 
-            // create the bitmap to display
-            this.depthBitmap = new WriteableBitmap(this.depthFrameDescription.Width, this.depthFrameDescription.Height, 96.0, 96.0, PixelFormats.Gray8, null);
+            List<Color> colorList = new List<Color>();
+            colorList.Add(Color.FromRgb(0, 0, 255));
+            colorList.Add(Color.FromRgb(0, 255, 0));
+            colorList.Add(Color.FromRgb(70, 200, 0));
+            colorList.Add(Color.FromRgb(100, 180, 0));
+            colorList.Add(Color.FromRgb(140, 160, 0));
+            colorList.Add(Color.FromRgb(200, 140, 0));
+            colorList.Add(Color.FromRgb(255, 0, 0));
+            colorList.Add(Color.FromRgb(0, 0, 0));
+
+
+
+            BitmapPalette bp = new BitmapPalette(colorList);
+                
+            // create the bitmap to display            
+            this.depthBitmap = new WriteableBitmap(this.depthFrameDescription.Width, this.depthFrameDescription.Height, 96.0, 96.0, PixelFormats.Indexed8, bp);
            
             // open the reader for the body frames
             this.bodyFrameReader = this.kinectSensor.BodyFrameSource.OpenReader();
@@ -384,35 +403,35 @@ namespace Microsoft.Samples.Kinect.DepthBasics
 
         }
 
-        ///// <summary>
-        ///// Gets the color at a specific pixel
-        ///// </summary>
-        ///// <param name="colorBitmap">the RGB image</param>
-        ///// <param name="x">x coordiante in the rgb image</param>
-        ///// <param name="y">y coordiante in the rgb image</param>
-        //public static Color getColorFromPixel(WriteableBitmap colorBitmap, int x, int y)
-        //{
-        //    Color c = new Color();
+        /// <summary>
+        /// gets the color at a specific pixel
+        /// </summary>
+        /// <param name="colorbitmap">the rgb image</param>
+        /// <param name="x">x coordiante in the rgb image</param>
+        /// <param name="y">y coordiante in the rgb image</param>
+        public static Color getColorFromPixel(WriteableBitmap colorbitmap, int x, int y)
+        {
+            Color c = new Color();
 
-        //    // Check that the pixel is within range
-        //    if (x > colorBitmap.PixelWidth || y > colorBitmap.PixelHeight)
-        //    {
-        //        return c;
-        //    }
+            // check that the pixel is within range
+            if (x > colorbitmap.PixelWidth || y > colorbitmap.PixelHeight)
+            {
+                return c;
+            }
 
-        //    IntPtr buffer = colorBitmap.BackBuffer;
-        //    int pos = y*colorBitmap.BackBufferStride + x*4;
-        //    unsafe
-        //    {
-        //        byte* p_buffer = (byte*)buffer.ToPointer();
-        //        c = Color.FromArgb(p_buffer[pos + 3], p_buffer[pos+ 2], p_buffer[pos + 1], p_buffer[pos]);
-        //        p_buffer[pos + 3] = c.A;
-        //        p_buffer[pos + 2] = 0;//c.R;
-        //        p_buffer[pos + 1] = 0; // c.G;
-        //        p_buffer[pos] = 0; // c.B;
-        //    }
-        //    return c;
-        //}
+            IntPtr buffer = colorbitmap.BackBuffer;
+            int pos = y * colorbitmap.BackBufferStride + x * 4;
+            unsafe
+            {
+                byte* p_buffer = (byte*)buffer.ToPointer();
+                c = Color.FromArgb(p_buffer[pos + 3], p_buffer[pos + 2], p_buffer[pos + 1], p_buffer[pos]);
+                //p_buffer[pos + 3] = c.A;
+                //p_buffer[pos + 2] = 0;//c.R;
+                //p_buffer[pos + 1] = 0; // c.G;
+                //p_buffer[pos] = 0; // c.B;
+            }
+            return c;
+        }
 
 
         /// <summary>
@@ -438,11 +457,11 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                         {
                             // Note: In order to see the full range of depth (including the less reliable far field depth)
                             // we are setting maxDepth to the extreme potential depth threshold
-                            ushort maxDepth = ushort.MaxValue;
+                            //ushort maxDepth = ushort.MaxValue;
 
                             // If you wish to filter by reliable depth distance, uncomment the following line:
-                            //// maxDepth = depthFrame.DepthMaxReliableDistance
-                            
+                            ushort maxDepth = depthFrame.DepthMaxReliableDistance;
+                          
                             this.ProcessDepthFrameData(depthBuffer.UnderlyingBuffer, depthBuffer.Size, depthFrame.DepthMinReliableDistance, maxDepth);
                             depthFrameProcessed = true;
                         }
@@ -454,6 +473,8 @@ namespace Microsoft.Samples.Kinect.DepthBasics
             {
                 this.RenderDepthPixels();
             }
+
+
         }
 
         /// <summary>
@@ -464,6 +485,7 @@ namespace Microsoft.Samples.Kinect.DepthBasics
         private void Reader_BodyFrameArrived(object sender, BodyFrameArrivedEventArgs e)
         {
             bool dataReceived = false;
+            Color rHandColor = Color.FromArgb(0, 0, 0, 0);
             using (BodyFrame bodyFrame = e.FrameReference.AcquireFrame())
             {
                 if (bodyFrame != null)
@@ -509,17 +531,27 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                                 DepthSpacePoint depthSpacePoint = this.coordinateMapper.MapCameraPointToDepthSpace(position);
                                 jointPoints[jointType] = new Point(depthSpacePoint.X, depthSpacePoint.Y);
 
-                                //Try to find the RGB color of the hand
-                                if (jointType == JointType.HandRight)
+                                //ColorSpacePoint colorSpacePoint;
+                                switch (jointType)
                                 {
-                                    ColorSpacePoint colorSpacePoint = this.coordinateMapper.MapCameraPointToColorSpace(position);
-                                    rPalmPos = new Point(colorSpacePoint.X,colorSpacePoint.Y);
+                                    //Try to find the deepth coordianates of the hand
+                                    case JointType.HandRight:
+                                        //colorSpacePoint = this.coordinateMapper.MapCameraPointToColorSpace(position);
+                                        rPalmPos = new Point(depthSpacePoint.X,depthSpacePoint.Y);//new Point(colorSpacePoint.X,colorSpacePoint.Y);
+                                        rHandColor =  getColorFromPixel(this.depthBitmap, (int)depthSpacePoint.X, (int)depthSpacePoint.Y);//getColorFromPixel(this.depthBitmap, (int)colorSpacePoint.X, (int)colorSpacePoint.Y);
+                                        break;
 
-
+                                    case JointType.WristRight:
+                                        rWristPos = new Point(depthSpacePoint.X, depthSpacePoint.Y);
+                                        break;
                                 }
+
                             }
 
-                            this.DrawBody(joints, jointPoints, dc, drawPen);
+                            //this.DrawBody(joints, jointPoints, dc, drawPen);
+
+                            //this.DrawHand(rHandColor,dc);
+
                             // prevent drawing outside of our render area
                             this.drawingGroup.ClipGeometry = new RectangleGeometry(new Rect(0.0, 0.0, this.displayWidth, this.displayHeight));
 
@@ -530,6 +562,23 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                 }
             }
         }
+
+        private void DrawHand(Color handColor, DrawingContext drawingContext)
+        {
+            Brush drawBrush = this.trackedJointBrush;
+            for (int x = (int)rPalmPos.X -10; x < (int)rPalmPos.X + 10; x+=3)
+            {
+                
+                for (int y = (int)rWristPos.Y; y > (int)rWristPos.Y - 100; y-=3)
+                {
+                    if (getColorFromPixel(this.depthBitmap, x, y).Equals(handColor))
+                    {
+                        drawingContext.DrawEllipse(drawBrush, null, new Point(x,y), 3.0, 3.0);
+                    } 
+                }
+            }
+        }
+
 
         private void DrawBody(IReadOnlyDictionary<JointType, Joint> joints, IDictionary<JointType, Point> jointPoints, DrawingContext drawingContext, Pen drawingPen)
         {
@@ -608,16 +657,75 @@ namespace Microsoft.Samples.Kinect.DepthBasics
             // depth frame data is a 16 bit value
             ushort* frameData = (ushort*)depthFrameData;
 
+            int index = ((int)rPalmPos.X) + ((int)rPalmPos.Y) * this.displayWidth;
+
+            int frameDataLength = (int)(depthFrameDataSize / this.depthFrameDescription.BytesPerPixel);
+
+            //make sure we don't go out of bounds
+            if (index >= frameDataLength)
+            {
+                return;
+            }
+            
+            
+            ushort palmDepth = frameData[index];
+            //Console.Out.Write("\nX:" + (int)rPalmPos.X + "Y:" + (int)rPalmPos.Y + "Depth:" + palmDepth);
+
+            int wristCutOff = ((int)rWristPos.Y) * this.displayWidth;
+
+
+
             // convert depth to a visual representation
-            for (int i = 0; i < (int)(depthFrameDataSize / this.depthFrameDescription.BytesPerPixel); ++i)
+            for (int i = 0; i < frameDataLength; ++i)
             {
                 // Get the depth for this pixel
                 ushort depth = frameData[i];
 
                 // To convert to a byte, we're mapping the depth value to the byte range.
                 // Values outside the reliable depth range are mapped to 0 (black).
-                this.depthPixels[i] = (byte)(depth >= minDepth && depth <= maxDepth ? (depth / MapDepthToByte) : 0);
+                if (i < (wristCutOff + 200000))
+                {
+                    //only colors pixels that are close in depth to our palm depth (depth / MapDepthToByte)
+                    switch ((palmDepth - depth)/20)
+                    {
+                        case -1: // Behind palm depth, make blue
+                            this.depthPixels[i] = 0; // On palm depth, make green
+                            break;
+                        case 0:
+                            this.depthPixels[i] = 1; // further forward from palm depth, make red
+                            break;
+                        case 1:
+                            this.depthPixels[i] = 2;
+                            break;
+                        case 2:
+                            this.depthPixels[i] = 3;
+                            break;
+                        case 3:
+                            this.depthPixels[i] = 4;
+                            break;
+                        case 4:
+                            this.depthPixels[i] = 5;
+                            break;
+                        case 5:
+                            this.depthPixels[i] = 6;
+                            break;
+                        case 6:
+                            this.depthPixels[i] = 7;
+                            break;
+                        default:  // to far away, make black
+                            this.depthPixels[i] = 8;
+                            break;
+                    }
+                    
+                }
+                else
+                {
+                    this.depthPixels[i] = 8;
+                }
+              
+
             }
+
         }
 
         /// <summary>
@@ -644,4 +752,5 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                                                             : Properties.Resources.SensorNotAvailableStatusText;
         }
     }
+
 }
