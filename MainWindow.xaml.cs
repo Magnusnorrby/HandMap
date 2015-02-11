@@ -48,7 +48,7 @@ namespace Microsoft.Samples.Kinect.DepthBasics
         private ColorFrameReader colorFrameReader = null;
 
         /// <summary>
-        /// Bitmap to display
+        /// Bitmap to display (RGB)
         /// </summary>
         private WriteableBitmap colorBitmap = null;
             
@@ -124,6 +124,7 @@ namespace Microsoft.Samples.Kinect.DepthBasics
         /// </summary>
         private DrawingImage jointSource;
 
+
         /// <summary>
         /// Coordinate mapper to map one type of point to another
         /// </summary>
@@ -143,6 +144,12 @@ namespace Microsoft.Samples.Kinect.DepthBasics
         /// Height of display (depth space)
         /// </summary>
         private int displayHeight;
+
+        /// <summary>
+        /// Right palm position in colorMap coordinates
+        /// </summary>
+        private Point rPalmPos;
+
 
 
 
@@ -181,7 +188,7 @@ namespace Microsoft.Samples.Kinect.DepthBasics
             this.depthFrameReader = this.kinectSensor.DepthFrameSource.OpenReader();
 
             // wire handler for frame arrival
-            this.depthFrameReader.FrameArrived += this.Reader_FrameArrived;
+            this.depthFrameReader.FrameArrived += this.Reader_DepthFrameArrived;
 
             // get FrameDescription from DepthFrameSource
             this.depthFrameDescription = this.kinectSensor.DepthFrameSource.FrameDescription;
@@ -370,14 +377,50 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                     }
                 }
             }
+
+         
+
+            
+
         }
+
+        ///// <summary>
+        ///// Gets the color at a specific pixel
+        ///// </summary>
+        ///// <param name="colorBitmap">the RGB image</param>
+        ///// <param name="x">x coordiante in the rgb image</param>
+        ///// <param name="y">y coordiante in the rgb image</param>
+        //public static Color getColorFromPixel(WriteableBitmap colorBitmap, int x, int y)
+        //{
+        //    Color c = new Color();
+
+        //    // Check that the pixel is within range
+        //    if (x > colorBitmap.PixelWidth || y > colorBitmap.PixelHeight)
+        //    {
+        //        return c;
+        //    }
+
+        //    IntPtr buffer = colorBitmap.BackBuffer;
+        //    int pos = y*colorBitmap.BackBufferStride + x*4;
+        //    unsafe
+        //    {
+        //        byte* p_buffer = (byte*)buffer.ToPointer();
+        //        c = Color.FromArgb(p_buffer[pos + 3], p_buffer[pos+ 2], p_buffer[pos + 1], p_buffer[pos]);
+        //        p_buffer[pos + 3] = c.A;
+        //        p_buffer[pos + 2] = 0;//c.R;
+        //        p_buffer[pos + 1] = 0; // c.G;
+        //        p_buffer[pos] = 0; // c.B;
+        //    }
+        //    return c;
+        //}
+
 
         /// <summary>
         /// Handles the depth frame data arriving from the sensor
         /// </summary>
         /// <param name="sender">object sending the event</param>
         /// <param name="e">event arguments</param>
-        private void Reader_FrameArrived(object sender, DepthFrameArrivedEventArgs e)
+        private void Reader_DepthFrameArrived(object sender, DepthFrameArrivedEventArgs e)
         {
             bool depthFrameProcessed = false;
 
@@ -465,6 +508,15 @@ namespace Microsoft.Samples.Kinect.DepthBasics
 
                                 DepthSpacePoint depthSpacePoint = this.coordinateMapper.MapCameraPointToDepthSpace(position);
                                 jointPoints[jointType] = new Point(depthSpacePoint.X, depthSpacePoint.Y);
+
+                                //Try to find the RGB color of the hand
+                                if (jointType == JointType.HandRight)
+                                {
+                                    ColorSpacePoint colorSpacePoint = this.coordinateMapper.MapCameraPointToColorSpace(position);
+                                    rPalmPos = new Point(colorSpacePoint.X,colorSpacePoint.Y);
+
+
+                                }
                             }
 
                             this.DrawBody(joints, jointPoints, dc, drawPen);
