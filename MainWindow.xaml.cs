@@ -150,10 +150,6 @@ namespace Microsoft.Samples.Kinect.DepthBasics
         /// </summary>
         private Point rPalmPos;
 
-        /// <summary>
-        /// Right wrist position in depthMap coordinates
-        /// </summary>
-        private Point rWristPos;
 
 
 
@@ -541,16 +537,12 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                                         rHandColor =  getColorFromPixel(this.depthBitmap, (int)depthSpacePoint.X, (int)depthSpacePoint.Y);//getColorFromPixel(this.depthBitmap, (int)colorSpacePoint.X, (int)colorSpacePoint.Y);
                                         break;
 
-                                    case JointType.WristRight:
-                                        rWristPos = new Point(depthSpacePoint.X, depthSpacePoint.Y);
-                                        break;
                                 }
 
                             }
 
                             //this.DrawBody(joints, jointPoints, dc, drawPen);
 
-                            //this.DrawHand(rHandColor,dc);
 
                             // prevent drawing outside of our render area
                             this.drawingGroup.ClipGeometry = new RectangleGeometry(new Rect(0.0, 0.0, this.displayWidth, this.displayHeight));
@@ -563,21 +555,6 @@ namespace Microsoft.Samples.Kinect.DepthBasics
             }
         }
 
-        private void DrawHand(Color handColor, DrawingContext drawingContext)
-        {
-            Brush drawBrush = this.trackedJointBrush;
-            for (int x = (int)rPalmPos.X -10; x < (int)rPalmPos.X + 10; x+=3)
-            {
-                
-                for (int y = (int)rWristPos.Y; y > (int)rWristPos.Y - 100; y-=3)
-                {
-                    if (getColorFromPixel(this.depthBitmap, x, y).Equals(handColor))
-                    {
-                        drawingContext.DrawEllipse(drawBrush, null, new Point(x,y), 3.0, 3.0);
-                    } 
-                }
-            }
-        }
 
 
         private void DrawBody(IReadOnlyDictionary<JointType, Joint> joints, IDictionary<JointType, Point> jointPoints, DrawingContext drawingContext, Pen drawingPen)
