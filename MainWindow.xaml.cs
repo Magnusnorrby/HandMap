@@ -206,8 +206,8 @@ namespace Microsoft.Samples.Kinect.DepthBasics
             colorList.Add(Color.FromRgb(0, 255, 0));
             colorList.Add(Color.FromRgb(70, 200, 0));
             colorList.Add(Color.FromRgb(100, 180, 0));
-            colorList.Add(Color.FromRgb(140, 160, 0));
-            colorList.Add(Color.FromRgb(200, 140, 0));
+            colorList.Add(Color.FromRgb(200, 100, 0));
+            colorList.Add(Color.FromRgb(230, 70, 0));
             colorList.Add(Color.FromRgb(255, 0, 0));
             colorList.Add(Color.FromRgb(0, 0, 0));
 
@@ -669,62 +669,87 @@ namespace Microsoft.Samples.Kinect.DepthBasics
             
             
             ushort palmDepth = frameData[index];
-            //Console.Out.Write("\nX:" + (int)rPalmPos.X + "Y:" + (int)rPalmPos.Y + "Depth:" + palmDepth);
 
-            int wristCutOff = ((int)rWristPos.Y) * this.displayWidth;
 
 
 
             // convert depth to a visual representation
             for (int i = 0; i < frameDataLength; ++i)
             {
-                // Get the depth for this pixel
-                ushort depth = frameData[i];
 
-                // To convert to a byte, we're mapping the depth value to the byte range.
-                // Values outside the reliable depth range are mapped to 0 (black).
-                if (i < (wristCutOff + 200000))
-                {
-                    //only colors pixels that are close in depth to our palm depth (depth / MapDepthToByte)
-                    switch ((palmDepth - depth)/20)
-                    {
-                        case -1: // Behind palm depth, make blue
-                            this.depthPixels[i] = 0; // On palm depth, make green
-                            break;
-                        case 0:
-                            this.depthPixels[i] = 1; // further forward from palm depth, make red
-                            break;
-                        case 1:
-                            this.depthPixels[i] = 2;
-                            break;
-                        case 2:
-                            this.depthPixels[i] = 3;
-                            break;
-                        case 3:
-                            this.depthPixels[i] = 4;
-                            break;
-                        case 4:
-                            this.depthPixels[i] = 5;
-                            break;
-                        case 5:
-                            this.depthPixels[i] = 6;
-                            break;
-                        case 6:
-                            this.depthPixels[i] = 7;
-                            break;
-                        default:  // to far away, make black
-                            this.depthPixels[i] = 8;
-                            break;
-                    }
-                    
-                }
-                else
-                {
-                    this.depthPixels[i] = 8;
-                }
-              
+                this.depthPixels[i] = 8;
 
             }
+
+
+            int safe = 0;
+            
+            int xLower = ((int)rPalmPos.X - 50) > 0 ? ((int)rPalmPos.X - 50) : 0;
+            int yLower = ((int)rPalmPos.Y - 50) > 0 ? ((int)rPalmPos.Y - 50) : 0;
+            for (int x = xLower; x < xLower + 100; x++)
+            {
+                for (int y = yLower; y < yLower + 100; y++)
+                {
+                    int i = x + y * this.displayWidth;
+                    if (i < frameDataLength)
+                    {
+                        // Get the depth for this pixel
+                        ushort depth = frameData[i];
+
+
+
+                        //only colors pixels that are close in depth to our palm depth (depth / MapDepthToByte)
+                        switch ((palmDepth - depth) / 25)
+                        {
+                            case -1: // Behind palm depth, make blue
+                                this.depthPixels[i] = 0; // On palm depth, make green
+                                break;
+                            case 0:
+                                this.depthPixels[i] = 1; // further forward from palm depth, make red
+                                break;
+                            case 1:
+                                this.depthPixels[i] = 2;
+                                break;
+                            case 2:
+                                this.depthPixels[i] = 3;
+                                break;
+                            case 3:
+                                this.depthPixels[i] = 4;
+                                break;
+                            case 4:
+                                this.depthPixels[i] = 5;
+                                break;
+                            case 5:
+                                this.depthPixels[i] = 6;
+                                break;
+                            case 6:
+                                this.depthPixels[i] = 7;
+                                break;
+                            default:  // to far away, make black
+                                this.depthPixels[i] = 8;
+                                break;
+                        }
+                    
+                    }
+                }
+            }
+                for (int i = -50; i < 50; i++)
+                {
+                    safe = (int)rPalmPos.X + i + ((int)rPalmPos.Y + 50) * this.displayWidth;
+                    if (safe > 0 & safe < frameDataLength)
+                        this.depthPixels[safe] = 5;
+                    safe = (int)rPalmPos.X + i + ((int)rPalmPos.Y - 50) * this.displayWidth;
+                    if (safe > 0 & safe < frameDataLength)
+                        this.depthPixels[safe] = 5;
+                    safe = (int)rPalmPos.X + 50 + ((int)rPalmPos.Y + i) * this.displayWidth;
+                    if (safe > 0 & safe < frameDataLength)
+                        this.depthPixels[safe] = 5;
+                    safe = (int)rPalmPos.X - 50 + ((int)rPalmPos.Y - i) * this.displayWidth;
+                    if (safe > 0 & safe < frameDataLength)
+                        this.depthPixels[safe] = 5;
+                }
+
+
 
         }
 
