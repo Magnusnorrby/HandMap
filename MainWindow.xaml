@@ -31,7 +31,10 @@
         
       
     <Viewbox Grid.Row="1" HorizontalAlignment="Right" Margin="0,10,0,187">
-            <Image Source="{Binding ImageSource}" Stretch="UniformToFill"/>
+            <Grid>
+                <Image Source="{Binding ImageSource}" Stretch="UniformToFill"/>
+                
+            </Grid>
         </Viewbox>
 
 

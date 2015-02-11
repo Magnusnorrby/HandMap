@@ -103,7 +103,7 @@ namespace Microsoft.Samples.Kinect.DepthBasics
         private readonly Pen bodyPen = new Pen(Brushes.Red, 6);
 
         /// <summary>
-        /// Height of display (depth space)
+        /// Transperent background color
         /// </summary>
         private Brush bgColor = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0));
         
@@ -150,7 +150,10 @@ namespace Microsoft.Samples.Kinect.DepthBasics
         /// </summary>
         private Point rPalmPos;
 
-
+        /// <summary>
+        /// Intermediate storage for the color to depth mapping
+        /// </summary>
+        private DepthSpacePoint[] colorMappedToDepthPoints = null;
 
 
 
@@ -182,6 +185,8 @@ namespace Microsoft.Samples.Kinect.DepthBasics
             FrameDescription colorFrameDescription = this.kinectSensor.ColorFrameSource.CreateFrameDescription(ColorImageFormat.Bgra);
 
 
+            this.colorMappedToDepthPoints = new DepthSpacePoint[colorFrameDescription.Width * colorFrameDescription.Height];
+
             // create the bitmap to display
             this.colorBitmap = new WriteableBitmap(colorFrameDescription.Width, colorFrameDescription.Height, 96.0, 96.0, PixelFormats.Bgr32, null);
 
@@ -198,14 +203,14 @@ namespace Microsoft.Samples.Kinect.DepthBasics
             this.depthPixels = new byte[this.depthFrameDescription.Width * this.depthFrameDescription.Height];
 
             List<Color> colorList = new List<Color>();
-            colorList.Add(Color.FromRgb(0, 0, 255));
-            colorList.Add(Color.FromRgb(0, 255, 0));
-            colorList.Add(Color.FromRgb(70, 200, 0));
-            colorList.Add(Color.FromRgb(100, 180, 0));
-            colorList.Add(Color.FromRgb(200, 100, 0));
-            colorList.Add(Color.FromRgb(230, 70, 0));
-            colorList.Add(Color.FromRgb(255, 0, 0));
-            colorList.Add(Color.FromRgb(0, 0, 0));
+            colorList.Add(Color.FromArgb(255,0, 0, 255));
+            colorList.Add(Color.FromArgb(255,0, 255, 0));
+            colorList.Add(Color.FromArgb(255,70, 200, 0));
+            colorList.Add(Color.FromArgb(255,100, 180, 0));
+            colorList.Add(Color.FromArgb(255,200, 100, 0));
+            colorList.Add(Color.FromArgb(255,230, 70, 0));
+            colorList.Add(Color.FromArgb(255,255, 0, 0));
+            colorList.Add(Color.FromArgb(255, 0, 0, 0));
 
 
 
@@ -428,6 +433,33 @@ namespace Microsoft.Samples.Kinect.DepthBasics
             }
             return c;
         }
+
+        ///// <summary>
+        ///// sets the color of a specific pixel
+        ///// </summary>
+        ///// <param name="colorbitmap">the rgb image</param>
+        ///// <param name="x">x coordiante in the rgb image</param>
+        ///// <param name="y">y coordiante in the rgb image</param>
+        //public void setColorAtPixel(WriteableBitmap colorbitmap, int x, int y)
+        //{
+        //    // check that the pixel is within range
+        //    if (x > colorbitmap.PixelWidth || x < 0 || y > colorbitmap.PixelHeight || y < 0)
+        //    {
+        //        return;
+        //    }
+
+        //    IntPtr buffer = colorbitmap.BackBuffer;
+        //    int pos = y * colorbitmap.BackBufferStride + x * 4;
+        //    unsafe
+        //    {
+        //        byte* p_buffer = (byte*)buffer.ToPointer();
+        //        p_buffer[pos + 3] = 255; // A
+        //        p_buffer[pos + 2] = 0;//c.R;
+        //        p_buffer[pos + 1] = 0; // c.G;
+        //        p_buffer[pos] = 0;  // b
+        //    }
+
+        //}
 
 
         /// <summary>
@@ -654,18 +686,18 @@ namespace Microsoft.Samples.Kinect.DepthBasics
             for (int i = 0; i < frameDataLength; ++i)
             {
 
-                this.depthPixels[i] = 8;
+                this.depthPixels[i] = 7;
 
             }
 
+            // defines the rectangle size
+            int size = 60;
 
-            int safe = 0;
-            
-            int xLower = ((int)rPalmPos.X - 50) > 0 ? ((int)rPalmPos.X - 50) : 0;
-            int yLower = ((int)rPalmPos.Y - 50) > 0 ? ((int)rPalmPos.Y - 50) : 0;
-            for (int x = xLower; x < xLower + 100; x++)
+            int xLower = ((int)rPalmPos.X - size) > 0 ? ((int)rPalmPos.X - size) : 0;
+            int yLower = ((int)rPalmPos.Y - size) > 0 ? ((int)rPalmPos.Y - size) : 0;
+            for (int x = xLower; x < xLower + size*2; x++)
             {
-                for (int y = yLower; y < yLower + 100; y++)
+                for (int y = yLower; y < yLower + size*2; y++)
                 {
                     int i = x + y * this.displayWidth;
                     if (i < frameDataLength)
@@ -673,6 +705,14 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                         // Get the depth for this pixel
                         ushort depth = frameData[i];
 
+                        //// map the coordinate to the color image
+                        //DepthSpacePoint dsp = new DepthSpacePoint();
+                        //dsp.X = x;
+                        //dsp.Y = y;
+                        //ColorSpacePoint colorPoint = coordinateMapper.MapDepthPointToColorSpace(dsp, depth);
+                        //int cX = (int) colorPoint.X;
+                        //int cY = (int) colorPoint.Y;
+                        //setColorAtPixel(this.colorBitmap, cX, cY);
 
 
                         //only colors pixels that are close in depth to our palm depth (depth / MapDepthToByte)
@@ -700,28 +740,30 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                                 this.depthPixels[i] = 6;
                                 break;
                             case 6:
-                                this.depthPixels[i] = 7;
-                                break;
                             default:  // to far away, make black
-                                this.depthPixels[i] = 8;
+                                this.depthPixels[i] = 7;
                                 break;
                         }
                     
                     }
                 }
             }
-                for (int i = -50; i < 50; i++)
+
+            // draws the rectangle
+            int safe = 0;
+           
+            for (int i = -size; i < size; i++)
                 {
-                    safe = (int)rPalmPos.X + i + ((int)rPalmPos.Y + 50) * this.displayWidth;
+                    safe = (int)rPalmPos.X + i + ((int)rPalmPos.Y + size) * this.displayWidth;
                     if (safe > 0 & safe < frameDataLength)
                         this.depthPixels[safe] = 5;
-                    safe = (int)rPalmPos.X + i + ((int)rPalmPos.Y - 50) * this.displayWidth;
+                    safe = (int)rPalmPos.X + i + ((int)rPalmPos.Y - size) * this.displayWidth;
                     if (safe > 0 & safe < frameDataLength)
                         this.depthPixels[safe] = 5;
-                    safe = (int)rPalmPos.X + 50 + ((int)rPalmPos.Y + i) * this.displayWidth;
+                    safe = (int)rPalmPos.X + size + ((int)rPalmPos.Y + i) * this.displayWidth;
                     if (safe > 0 & safe < frameDataLength)
                         this.depthPixels[safe] = 5;
-                    safe = (int)rPalmPos.X - 50 + ((int)rPalmPos.Y - i) * this.displayWidth;
+                    safe = (int)rPalmPos.X - size + ((int)rPalmPos.Y - i) * this.displayWidth;
                     if (safe > 0 & safe < frameDataLength)
                         this.depthPixels[safe] = 5;
                 }
