@@ -151,6 +151,11 @@ namespace Microsoft.Samples.Kinect.DepthBasics
         private Point rPalmPos;
 
         /// <summary>
+        /// Left palm position in depthMap coordinates
+        /// </summary>
+        private Point lPalmPos;
+
+        /// <summary>
         /// Intermediate storage for the color to depth mapping
         /// </summary>
         private DepthSpacePoint[] colorMappedToDepthPoints = null;
@@ -262,6 +267,9 @@ namespace Microsoft.Samples.Kinect.DepthBasics
 
             // initialize the components (controls) of the window
             this.InitializeComponent();
+
+
+            
         }
 
         /// <summary>
@@ -426,10 +434,6 @@ namespace Microsoft.Samples.Kinect.DepthBasics
             {
                 byte* p_buffer = (byte*)buffer.ToPointer();
                 c = Color.FromArgb(p_buffer[pos + 3], p_buffer[pos + 2], p_buffer[pos + 1], p_buffer[pos]);
-                //p_buffer[pos + 3] = c.A;
-                //p_buffer[pos + 2] = 0;//c.R;
-                //p_buffer[pos + 1] = 0; // c.G;
-                //p_buffer[pos] = 0; // c.B;
             }
             return c;
         }
@@ -514,6 +518,8 @@ namespace Microsoft.Samples.Kinect.DepthBasics
         {
             bool dataReceived = false;
             Color rHandColor = Color.FromArgb(0, 0, 0, 0);
+            Color lHandColor = Color.FromArgb(0, 0, 0, 0);
+
             using (BodyFrame bodyFrame = e.FrameReference.AcquireFrame())
             {
                 if (bodyFrame != null)
@@ -567,6 +573,11 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                                         //colorSpacePoint = this.coordinateMapper.MapCameraPointToColorSpace(position);
                                         rPalmPos = new Point(depthSpacePoint.X,depthSpacePoint.Y);//new Point(colorSpacePoint.X,colorSpacePoint.Y);
                                         rHandColor =  getColorFromPixel(this.depthBitmap, (int)depthSpacePoint.X, (int)depthSpacePoint.Y);//getColorFromPixel(this.depthBitmap, (int)colorSpacePoint.X, (int)colorSpacePoint.Y);
+                                        break;
+
+                                    case JointType.HandLeft:
+                                        lPalmPos = new Point(depthSpacePoint.X, depthSpacePoint.Y);
+                                        lHandColor = getColorFromPixel(this.depthBitmap, (int)depthSpacePoint.X, (int)depthSpacePoint.Y);
                                         break;
 
                                 }
@@ -663,24 +674,8 @@ namespace Microsoft.Samples.Kinect.DepthBasics
         /// <param name="maxDepth">The maximum reliable depth value for the frame</param>
         private unsafe void ProcessDepthFrameData(IntPtr depthFrameData, uint depthFrameDataSize, ushort minDepth, ushort maxDepth)
         {
-            // depth frame data is a 16 bit value
-            ushort* frameData = (ushort*)depthFrameData;
-
-            int index = ((int)rPalmPos.X) + ((int)rPalmPos.Y) * this.displayWidth;
 
             int frameDataLength = (int)(depthFrameDataSize / this.depthFrameDescription.BytesPerPixel);
-
-            //make sure we don't go out of bounds
-            if (index >= frameDataLength)
-            {
-                return;
-            }
-            
-            
-            ushort palmDepth = frameData[index];
-
-
-
 
             // convert depth to a visual representation
             for (int i = 0; i < frameDataLength; ++i)
@@ -689,12 +684,34 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                 this.depthPixels[i] = 7;
 
             }
+           
+            // right hand
+            mapHand(frameDataLength, depthFrameData, (int)rPalmPos.X, (int)rPalmPos.Y);
+
+            // left hand
+            mapHand(frameDataLength, depthFrameData, (int)lPalmPos.X , (int)lPalmPos.Y);
+
+        }
+
+        private unsafe void mapHand(int frameDataLength, IntPtr depthFrameData, int palmPosX, int palmPosY){
+
+            int index = (palmPosX) + (palmPosY) * this.displayWidth;
+            //make sure we don't go out of bounds
+            if (index >= frameDataLength)
+            {
+                return;
+            }
+
+            // depth frame data is a 16 bit value
+            ushort* frameData = (ushort*)depthFrameData;
+
+            ushort palmDepth = frameData[index];
 
             // defines the rectangle size
             int size = 60;
 
-            int xLower = ((int)rPalmPos.X - size) > 0 ? ((int)rPalmPos.X - size) : 0;
-            int yLower = ((int)rPalmPos.Y - size) > 0 ? ((int)rPalmPos.Y - size) : 0;
+            int xLower = (palmPosX - size) > 0 ? (palmPosX - size) : 0;
+            int yLower = (palmPosY - size) > 0 ? (palmPosY - size) : 0;
             for (int x = xLower; x < xLower + size*2; x++)
             {
                 for (int y = yLower; y < yLower + size*2; y++)
@@ -754,23 +771,21 @@ namespace Microsoft.Samples.Kinect.DepthBasics
            
             for (int i = -size; i < size; i++)
                 {
-                    safe = (int)rPalmPos.X + i + ((int)rPalmPos.Y + size) * this.displayWidth;
+                    safe = palmPosX + i + (palmPosY + size) * this.displayWidth;
                     if (safe > 0 & safe < frameDataLength)
                         this.depthPixels[safe] = 5;
-                    safe = (int)rPalmPos.X + i + ((int)rPalmPos.Y - size) * this.displayWidth;
+                    safe = palmPosX + i + (palmPosY - size) * this.displayWidth;
                     if (safe > 0 & safe < frameDataLength)
                         this.depthPixels[safe] = 5;
-                    safe = (int)rPalmPos.X + size + ((int)rPalmPos.Y + i) * this.displayWidth;
+                    safe = palmPosX + size + (palmPosY + i) * this.displayWidth;
                     if (safe > 0 & safe < frameDataLength)
                         this.depthPixels[safe] = 5;
-                    safe = (int)rPalmPos.X - size + ((int)rPalmPos.Y - i) * this.displayWidth;
+                    safe = palmPosX - size + (palmPosY - i) * this.displayWidth;
                     if (safe > 0 & safe < frameDataLength)
                         this.depthPixels[safe] = 5;
                 }
 
-
-
-        }
+       }
 
         /// <summary>
         /// Renders color pixels into the writeableBitmap.
