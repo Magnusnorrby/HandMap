@@ -156,6 +156,16 @@ namespace Microsoft.Samples.Kinect.DepthBasics
         private Point lPalmPos;
 
         /// <summary>
+        /// Right wrist position in depthMap coordinates
+        /// </summary>
+        private Point rWristPos;
+
+        /// <summary>
+        /// Left wrist position in depthMap coordinates
+        /// </summary>
+        private Point lWristPos;
+
+        /// <summary>
         /// Intermediate storage for the color to depth mapping
         /// </summary>
         private DepthSpacePoint[] colorMappedToDepthPoints = null;
@@ -494,7 +504,7 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                             // If you wish to filter by reliable depth distance, uncomment the following line:
                             ushort maxDepth = depthFrame.DepthMaxReliableDistance;
                           
-                            this.ProcessDepthFrameData(depthBuffer.UnderlyingBuffer, depthBuffer.Size, depthFrame.DepthMinReliableDistance, maxDepth);
+                            this.ProcessDepthFrameData(depthBuffer.UnderlyingBuffer, depthBuffer.Size);
                             depthFrameProcessed = true;
                         }
                     }
@@ -579,6 +589,15 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                                         lPalmPos = new Point(depthSpacePoint.X, depthSpacePoint.Y);
                                         lHandColor = getColorFromPixel(this.depthBitmap, (int)depthSpacePoint.X, (int)depthSpacePoint.Y);
                                         break;
+
+                                    case JointType.WristLeft:
+                                        lWristPos = new Point(depthSpacePoint.X, depthSpacePoint.Y);
+                                        break;
+
+                                    case JointType.WristRight:
+                                        rWristPos = new Point(depthSpacePoint.X, depthSpacePoint.Y);
+                                        break;
+
 
                                 }
 
@@ -670,9 +689,7 @@ namespace Microsoft.Samples.Kinect.DepthBasics
         /// </summary>
         /// <param name="depthFrameData">Pointer to the DepthFrame image data</param>
         /// <param name="depthFrameDataSize">Size of the DepthFrame image data</param>
-        /// <param name="minDepth">The minimum reliable depth value for the frame</param>
-        /// <param name="maxDepth">The maximum reliable depth value for the frame</param>
-        private unsafe void ProcessDepthFrameData(IntPtr depthFrameData, uint depthFrameDataSize, ushort minDepth, ushort maxDepth)
+        private unsafe void ProcessDepthFrameData(IntPtr depthFrameData, uint depthFrameDataSize)
         {
 
             int frameDataLength = (int)(depthFrameDataSize / this.depthFrameDescription.BytesPerPixel);
@@ -687,12 +704,64 @@ namespace Microsoft.Samples.Kinect.DepthBasics
            
             // right hand
             mapHand(frameDataLength, depthFrameData, (int)rPalmPos.X, (int)rPalmPos.Y);
+            
 
             // left hand
             mapHand(frameDataLength, depthFrameData, (int)lPalmPos.X , (int)lPalmPos.Y);
 
+            // right hand
+            drawHandDirection((int)rPalmPos.X, (int)rPalmPos.Y, (int)rWristPos.X, (int)rWristPos.Y, frameDataLength);
+
+            // left hand
+            drawHandDirection((int)lPalmPos.X, (int)lPalmPos.Y, (int)lWristPos.X, (int)lWristPos.Y, frameDataLength);
+
+            
+            
         }
 
+        /// <summary>
+        /// Draws a line between the palm and the wrist to show the hands direction
+        /// </summary>   
+        /// <param name="palmPosX">The x coordinate of the palm</param>
+        /// <param name="palmPosY">The y coordinate of the palm</param>
+        /// <param name="wristPosX">The x coordinate of the wrist</param>
+        /// <param name="wristPosY">The y coordinate of the wrist</param>
+        /// <param name="frameDataLength">Size of the DepthFrame image data in pixels</param>
+        private void drawHandDirection(int palmPosX, int palmPosY, int wristPosX, int wristPosY, int range)
+        {
+            int x = palmPosX - wristPosX;
+            int y = palmPosY - wristPosY;
+
+            for (int i = 0; i < 20; i++)  // a line from the wrist to the palm
+            {
+                int index = (int)wristPosX + (x * i / 20) + ((y * i / 20) + (int)wristPosY) * this.displayWidth;
+                if (index > 0 & index < range)
+                    this.depthPixels[index] = 5; //color it red
+            }
+
+            for (int i = -20; i < 20; i++) // a perpendicular line starting at the palm
+            {
+                int index = (int)palmPosX - (y * i / 20) + ((x * i / 20) + (int)palmPosY) * this.displayWidth;
+                if (index > 0 & index < range)
+                    this.depthPixels[index] = 5; //color it red
+                //index = (int)palmPosX + 2*x - (y * i / 20) + ((x * i / 20) + (int)palmPosY + 2*y) * this.displayWidth;
+                //if (index > 0 & index < range)
+                //    this.depthPixels[index] = 5; //color it red
+
+            }
+
+        }
+
+        /// <summary>
+        /// Directly accesses the underlying image buffer of the DepthFrame to 
+        /// create a displayable bitmap.
+        /// This function requires the /unsafe compiler option as we make use of direct
+        /// access to the native memory pointed to by the depthFrameData pointer.
+        /// </summary>
+        /// <param name="frameDataLength">Size of the DepthFrame image data in pixels</param>
+        /// <param name="depthFrameData">Pointer to the DepthFrame image data</param>       
+        /// <param name="palmPosX">The x coordinate of the palm</param>
+        /// <param name="palmPosY">The y coordinate of the palm</param>
         private unsafe void mapHand(int frameDataLength, IntPtr depthFrameData, int palmPosX, int palmPosY){
 
             int index = (palmPosX) + (palmPosY) * this.displayWidth;
@@ -711,6 +780,15 @@ namespace Microsoft.Samples.Kinect.DepthBasics
             int size = 60;
 
             //used to track the borders of the hand
+            int[][] imageArray = new int[this.displayWidth][];
+            for (int i = 0; i < this.displayWidth; i++)
+            {
+                imageArray[i] = new int[this.displayHeight];
+            }
+
+            int xp = 0;
+            int yp = 0;
+
             bool handBorder = true;
             bool oldHandBorder;
 
@@ -768,7 +846,6 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                                 this.depthPixels[i] = 6;
                                 handBorder = false;
                                 break;
-                            case 6:
                             default:  // to far away, make black
                                 this.depthPixels[i] = 7;
                                 handBorder = true;
@@ -777,12 +854,22 @@ namespace Microsoft.Samples.Kinect.DepthBasics
 
                         if (oldHandBorder != handBorder) // we found the border
                         {
-                            this.depthPixels[i] = 5;
+                            if (i < (index + 20 * this.displayWidth))
+                            {
+                                this.depthPixels[i] = 5; //color it red
+                                yp = i / this.displayWidth;
+                                xp = i - yp * this.displayWidth;
+                                imageArray[xp][yp] = 1;
+                            }
+
                         }
                     
                     }
                 }
             }
+
+
+    
 
             // draws the rectangle
             int safe = 0;
@@ -804,6 +891,7 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                 }
 
        }
+
 
         /// <summary>
         /// Renders color pixels into the writeableBitmap.
