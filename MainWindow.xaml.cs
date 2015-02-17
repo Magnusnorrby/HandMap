@@ -681,7 +681,7 @@ namespace Microsoft.Samples.Kinect.DepthBasics
             for (int i = 0; i < frameDataLength; ++i)
             {
 
-                this.depthPixels[i] = 7;
+                this.depthPixels[i] = 7; // sets a pixels to a default black
 
             }
            
@@ -710,6 +710,10 @@ namespace Microsoft.Samples.Kinect.DepthBasics
             // defines the rectangle size
             int size = 60;
 
+            //used to track the borders of the hand
+            bool handBorder = true;
+            bool oldHandBorder;
+
             int xLower = (palmPosX - size) > 0 ? (palmPosX - size) : 0;
             int yLower = (palmPosY - size) > 0 ? (palmPosY - size) : 0;
             for (int x = xLower; x < xLower + size*2; x++)
@@ -732,34 +736,48 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                         //setColorAtPixel(this.colorBitmap, cX, cY);
 
 
+                        oldHandBorder = handBorder;
                         //only colors pixels that are close in depth to our palm depth (depth / MapDepthToByte)
                         switch ((palmDepth - depth) / 25)
                         {
                             case -1: // Behind palm depth, make blue
                                 this.depthPixels[i] = 0; // On palm depth, make green
+                                handBorder = false;
                                 break;
                             case 0:
                                 this.depthPixels[i] = 1; // further forward from palm depth, make red
+                                handBorder = false;
                                 break;
                             case 1:
                                 this.depthPixels[i] = 2;
+                                handBorder = false;
                                 break;
                             case 2:
                                 this.depthPixels[i] = 3;
+                                handBorder = false;
                                 break;
                             case 3:
                                 this.depthPixels[i] = 4;
+                                handBorder = false;
                                 break;
                             case 4:
                                 this.depthPixels[i] = 5;
+                                handBorder = false;
                                 break;
                             case 5:
                                 this.depthPixels[i] = 6;
+                                handBorder = false;
                                 break;
                             case 6:
                             default:  // to far away, make black
                                 this.depthPixels[i] = 7;
+                                handBorder = true;
                                 break;
+                        }
+
+                        if (oldHandBorder != handBorder) // we found the border
+                        {
+                            this.depthPixels[i] = 5;
                         }
                     
                     }
