@@ -4,5 +4,5 @@ Everythign aligned with the depth of the palm is shown as green. Objects closer 
 ![Screenshot](https://github.com/Magnusnorrby/HandMap/blob/master/Images/Screenshot.png)
 ![Screenshot](https://github.com/Magnusnorrby/HandMap/blob/master/Images/Screenshot2.png)
 
-Added finger tip tracking for three fingers:
+Added finger tip tracking for three fingers + thumb:
 ![Screenshot](https://github.com/Magnusnorrby/HandMap/blob/master/Images/FingerTipTracking.png)
