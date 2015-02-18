@@ -729,15 +729,86 @@ namespace Microsoft.Samples.Kinect.DepthBasics
             findFingers((int)lPalmPos.X, (int)lPalmPos.Y, (int)lWristPos.X, (int)lWristPos.Y, frameDataLength);
 
             // right thumb
-            drawFingerTip(frameDataLength, rThumbPos, 0); // 0 draws the thumb blue
+            findThumb((int)rPalmPos.X, (int)rPalmPos.Y, (int)rWristPos.X, (int)rWristPos.Y, frameDataLength, 1, -1);
+            
 
             // left thumb
-            drawFingerTip(frameDataLength, lThumbPos, 0); 
+            findThumb((int)lPalmPos.X, (int)lPalmPos.Y, (int)lWristPos.X, (int)lWristPos.Y, frameDataLength , -1, 1);
+            
+        }
+
+
+        /// <summary>
+        /// Analyses the hand to find the thumb
+        /// </summary>   
+        /// <param name="palmPosX">The x coordinate of the palm</param>
+        /// <param name="palmPosY">The y coordinate of the palm</param>
+        /// <param name="wristPosX">The x coordinate of the wrist</param>
+        /// <param name="wristPosY">The y coordinate of the wrist</param>
+        /// <param name="frameDataLength">Size of the DepthFrame image data in pixels</param>
+        /// <param name="d1">The direction variable for the thumb</param> //We presume that the right thumb is to the left of the hand and vice versa 
+        /// <param name="d2">The direction variable the thumb</param>
+        private void findThumb(int palmPosX, int palmPosY, int wristPosX, int wristPosY, int range, int d1, int d2) 
+        {
+            int x = palmPosX - wristPosX;
+            int y = palmPosY - wristPosY;
+
+            int max = 0;
+            int distance = 0;
+            int sumDist = 0;
+            int sumDistSize = 0; //all columns wont hit since we make it extra wide
+
+            Point thumb = new Point(0, 0);
+
+            int index;
+
+            for (int i = 0; i < 30; i++) 
+            {
+                //index = wristPosX + (x * i / 20) + ((y * i / 20) + wristPosY) * this.displayWidth;  // a line crossing both the center of the wrist and the center of the palm
+                //if (index > 0 & index < range)
+                //    this.depthPixels[index] = 5; //color it red
+
+                //index = wristPosX + d1 * (y * i / 20) + (d2 * (x * i / 20) + wristPosY) * this.displayWidth;
+                //if (index > 0 & index < range)
+                //    this.depthPixels[index] = 5; //color it red
+
+                int tempX = 0;
+                int tempY = 0;
+                for (int j = 40; j >= 0; j--)
+                {
+                    tempX = wristPosX + d1 * (y * j / 20) + (x * i / 20);
+                    tempY = (d2 * (x * j / 20) + (y * i / 20) + wristPosY);
+                    index = tempX +  tempY * this.displayWidth;
+                    if (index > 0 & index < range){
+                        if (this.depthPixels[index] != 7 & this.depthPixels[index] != 5) //ignore black background and the red rectangle
+                        {
+                            distance = j;
+                            sumDist += j;
+                            sumDistSize++;
+                            break;
+                        }
+                    }
+                         
+                }
+                if (distance > max)
+                {
+                    max = distance;
+                    thumb.X = tempX;
+                    thumb.Y = tempY;
+
+                }
+            }
+            if(sumDistSize>0){
+                 if(max > 1.3*sumDist/sumDistSize) // the thumb is stretched far enough
+                    drawFingerTip(range, thumb, 0); // 0 draws the thumb circle blue
+            }
+          
+
             
         }
 
         /// <summary>
-        /// Draws a line between the palm and the wrist to show the hands direction
+        /// Analyses the hand to find the fingers
         /// </summary>   
         /// <param name="palmPosX">The x coordinate of the palm</param>
         /// <param name="palmPosY">The y coordinate of the palm</param>
@@ -753,14 +824,7 @@ namespace Microsoft.Samples.Kinect.DepthBasics
             int divi = 20;
             int divj = 40;
 
-            int index;
-
-            //for (int i = 0; i < 20; i++)  // a line from the wrist to the palm
-            //{
-            //    index = (int)wristPosX + (x * i / 20) + ((y * i / 20) + (int)wristPosY) * this.displayWidth;
-            //    if (index > 0 & index < range)
-            //        this.depthPixels[index] = 5; //color it red
-            //}
+            
 
             int sumDist = 0;
             int averageDist = 0;
@@ -770,8 +834,8 @@ namespace Microsoft.Samples.Kinect.DepthBasics
             Point[] pointArray = new Point[width * 2];
 
             Point tip = new Point(0, 0);
-            
 
+            int index;
             for (int i = -width; i < width; i++) 
             {
 
@@ -784,18 +848,18 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                 // a box from the perpendicular line and forward, attempting to box in middle finger
                 for (int j = 120; j > 0; j--) // should over shoot the hand
                 {
-                    tempX = (int)palmPosX + -(y * i / divi) + (x * j / divj);
-                    tempY = ((x * i / divi)+(y * j / divj) + (int)palmPosY);
+                    tempX = palmPosX + -(y * i / divi) + (x * j / divj);
+                    tempY = ((x * i / divi)+(y * j / divj) + palmPosY);
 
                     index = tempX +  tempY * this.displayWidth;
                     if (index > 0 & index < range){
-                        if (this.depthPixels[index] != 7 & this.depthPixels[index] != 5) //ignore black and the red rectangle
+                        if (this.depthPixels[index] != 7 & this.depthPixels[index] != 5) //ignore black background and the red rectangle
                         {
                             distArray[i + width]  = j;
                             pointArray[i + width] = new Point(tempX, tempY);
 
                             sumDist += j;
-                            sumDistSize += 1;
+                            sumDistSize++;
                             break;
                         }
                     }
@@ -805,7 +869,7 @@ namespace Microsoft.Samples.Kinect.DepthBasics
 
             if (sumDistSize > 0)
             {
-                averageDist = sumDist / (sumDistSize);
+                averageDist = sumDist / sumDistSize;
 
                 float coef = 1.4f;
                 float limit =  averageDist * coef; // the limit distance for what we accept as a finger
