@@ -815,7 +815,7 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                     if ((float)max > limit) 
                     {
                         drawFingerTip(max, range, pointArray[maxIndex]); // we found a finger
-                        coef -= 0.1f;
+                        coef -= 0.15f;
                         limit = averageDist * coef;
                     }
                     else

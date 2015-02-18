@@ -113,13 +113,15 @@
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Images\Logo.png" />
-    <Resource Include="Images\Status.png" />
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Images\Screenshot.png" />
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Images\Screenshot2.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="FingerTipTracking.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
