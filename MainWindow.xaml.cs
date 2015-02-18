@@ -1,9 +1,4 @@
-﻿//------------------------------------------------------------------------------
-// <copyright file="MainWindow.xaml.cs" company="Microsoft">
-//     Copyright (c) Microsoft Corporation.  All rights reserved.
-// </copyright>
-//------------------------------------------------------------------------------
-
+﻿
 namespace Microsoft.Samples.Kinect.DepthBasics
 {
     using System;
@@ -164,6 +159,16 @@ namespace Microsoft.Samples.Kinect.DepthBasics
         /// Left wrist position in depthMap coordinates
         /// </summary>
         private Point lWristPos;
+
+        /// <summary>
+        /// Right thumb position in depthMap coordinates
+        /// </summary>
+        private Point rThumbPos;
+
+        /// <summary>
+        /// Left thumb position in depthMap coordinates
+        /// </summary>
+        private Point lThumbPos;
 
         /// <summary>
         /// Intermediate storage for the color to depth mapping
@@ -589,15 +594,22 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                                         lPalmPos = new Point(depthSpacePoint.X, depthSpacePoint.Y);
                                         lHandColor = getColorFromPixel(this.depthBitmap, (int)depthSpacePoint.X, (int)depthSpacePoint.Y);
                                         break;
+                                    
+                                    case JointType.WristRight:
+                                        rWristPos = new Point(depthSpacePoint.X, depthSpacePoint.Y);
+                                        break;
 
                                     case JointType.WristLeft:
                                         lWristPos = new Point(depthSpacePoint.X, depthSpacePoint.Y);
                                         break;
 
-                                    case JointType.WristRight:
-                                        rWristPos = new Point(depthSpacePoint.X, depthSpacePoint.Y);
+                                    case JointType.ThumbRight:
+                                        rThumbPos = new Point(depthSpacePoint.X, depthSpacePoint.Y);
                                         break;
 
+                                    case JointType.ThumbLeft:
+                                        lThumbPos = new Point(depthSpacePoint.X, depthSpacePoint.Y);
+                                        break;
 
                                 }
 
@@ -709,13 +721,18 @@ namespace Microsoft.Samples.Kinect.DepthBasics
             // left hand
             mapHand(frameDataLength, depthFrameData, (int)lPalmPos.X , (int)lPalmPos.Y);
 
+
             // right hand
-            drawHandDirection((int)rPalmPos.X, (int)rPalmPos.Y, (int)rWristPos.X, (int)rWristPos.Y, frameDataLength);
+            findFingers((int)rPalmPos.X, (int)rPalmPos.Y, (int)rWristPos.X, (int)rWristPos.Y, frameDataLength);
 
             // left hand
-            drawHandDirection((int)lPalmPos.X, (int)lPalmPos.Y, (int)lWristPos.X, (int)lWristPos.Y, frameDataLength);
+            findFingers((int)lPalmPos.X, (int)lPalmPos.Y, (int)lWristPos.X, (int)lWristPos.Y, frameDataLength);
 
-            
+            // right thumb
+            drawFingerTip(frameDataLength, rThumbPos, 0); // 0 draws the thumb blue
+
+            // left thumb
+            drawFingerTip(frameDataLength, lThumbPos, 0); 
             
         }
 
@@ -727,7 +744,7 @@ namespace Microsoft.Samples.Kinect.DepthBasics
         /// <param name="wristPosX">The x coordinate of the wrist</param>
         /// <param name="wristPosY">The y coordinate of the wrist</param>
         /// <param name="frameDataLength">Size of the DepthFrame image data in pixels</param>
-        private void drawHandDirection(int palmPosX, int palmPosY, int wristPosX, int wristPosY, int range)
+        private void findFingers(int palmPosX, int palmPosY, int wristPosX, int wristPosY, int range)
         {
             int x = palmPosX - wristPosX;
             int y = palmPosY - wristPosY;
@@ -814,8 +831,8 @@ namespace Microsoft.Samples.Kinect.DepthBasics
 
                     if ((float)max > limit) 
                     {
-                        drawFingerTip(max, range, pointArray[maxIndex]); // we found a finger
-                        coef -= 0.15f;
+                        drawFingerTip(range, pointArray[maxIndex], 5); // we found a finger
+                        coef -= 0.1f; //lower the bar for the next finger while still keeping the bar high when no finger is present
                         limit = averageDist * coef;
                     }
                     else
@@ -826,33 +843,41 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                     int tipSize = 7;
                     int start = (maxIndex > width) ? width : maxIndex; //remove values from the middle to the detected tip + the size of the tip
                     int end =   (maxIndex > width) ? maxIndex : width;
-                    for (int j = start - tipSize; j <= end + tipSize; j++) //remove values from the finger so we dont mark it twice
+
+                    for (int j = start - tipSize; j <= end + tipSize; j++) 
                     {
                         if (j >= 0 & j < distArray.Length)
                         {
-                            distArray[j] = averageDist;
+                            distArray[j] = 0; //remove values from the finger so we dont mark it twice
                         }
                             
                     }
                     
                 }
             }
+
         }
 
-        private void drawFingerTip(int max, int range, Point tip){                         
+        /// <summary>
+        /// Draws a circle around the tracked finger tip
+        /// </summary>   
+        /// <param name="range">Size of the DepthFrame image data in pixels</param>
+        /// <param name="tip">A point containing the finger tip coordinates</param>
+        /// <param name="color">The color of the circle</param>
+        private void drawFingerTip(int range, Point tip, byte color){                         
 
                     int r = 5;
                     for (double i = 0; i < 2 * Math.PI; i += 0.1) // a circle around the furthest finger tip
                     {
-                        int index = (int)(tip.X + Math.Cos(i) * r) + (int)(tip.Y + Math.Sin(i) * r) * this.displayWidth;
+                        int index = (int)(tip.X + Math.Cos(i) * r) + (int)(tip.Y + Math.Sin(i) * r) * this.displayWidth; //three calls makes the circle thicker
                         if (index > 0 & index < range)
-                            this.depthPixels[index] = 5; //color it red
+                            this.depthPixels[index] = color; 
                         index = (int)(tip.X + Math.Cos(i) * r) +1 + (int)(tip.Y + Math.Sin(i) * r) * this.displayWidth;
                         if (index > 0 & index < range)
-                            this.depthPixels[index] = 5; //color it red
+                            this.depthPixels[index] = color; 
                         index = (int)(tip.X + Math.Cos(i) * r) + (int)(tip.Y + Math.Sin(i) * r +1 ) * this.displayWidth;
                         if (index > 0 & index < range)
-                            this.depthPixels[index] = 5; //color it red
+                            this.depthPixels[index] = color; 
                     }
                         
            
