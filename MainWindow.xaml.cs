@@ -160,15 +160,6 @@ namespace Microsoft.Samples.Kinect.DepthBasics
         /// </summary>
         private Point lWristPos;
 
-        /// <summary>
-        /// Right thumb position in depthMap coordinates
-        /// </summary>
-        private Point rThumbPos;
-
-        /// <summary>
-        /// Left thumb position in depthMap coordinates
-        /// </summary>
-        private Point lThumbPos;
 
         /// <summary>
         /// Intermediate storage for the color to depth mapping
@@ -569,6 +560,8 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                             Dictionary<JointType, Point> jointPoints = new Dictionary<JointType, Point>();
                             foreach (JointType jointType in joints.Keys)
                             {
+
+                                TrackingState trackingState = joints[jointType].TrackingState;
                                 // sometimes the depth(Z) of an inferred joint may show as negative
                                 // clamp down to 0.1f to prevent coordinatemapper from returning (-Infinity, -Infinity)
                                 CameraSpacePoint position = joints[jointType].Position;
@@ -581,35 +574,45 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                                 jointPoints[jointType] = new Point(depthSpacePoint.X, depthSpacePoint.Y);
 
                                 //ColorSpacePoint colorSpacePoint;
+                                //colorSpacePoint = this.coordinateMapper.MapCameraPointToColorSpace(position);
+                                //new Point(colorSpacePoint.X,colorSpacePoint.Y);
+                                //getColorFromPixel(this.depthBitmap, (int)colorSpacePoint.X, (int)colorSpacePoint.Y);
+
                                 switch (jointType)
                                 {
                                     //Try to find the deepth coordianates of the hand
                                     case JointType.HandRight:
-                                        //colorSpacePoint = this.coordinateMapper.MapCameraPointToColorSpace(position);
-                                        rPalmPos = new Point(depthSpacePoint.X,depthSpacePoint.Y);//new Point(colorSpacePoint.X,colorSpacePoint.Y);
-                                        rHandColor =  getColorFromPixel(this.depthBitmap, (int)depthSpacePoint.X, (int)depthSpacePoint.Y);//getColorFromPixel(this.depthBitmap, (int)colorSpacePoint.X, (int)colorSpacePoint.Y);
+
+                                        if (trackingState == TrackingState.Tracked) //requiring the joint to be tracked saves jumpy behavior when Kinect guesses
+                                        {
+                                            rPalmPos = new Point(depthSpacePoint.X, depthSpacePoint.Y);
+                                            rHandColor = getColorFromPixel(this.depthBitmap, (int)depthSpacePoint.X, (int)depthSpacePoint.Y);
+                                        }
+                                    
                                         break;
 
                                     case JointType.HandLeft:
-                                        lPalmPos = new Point(depthSpacePoint.X, depthSpacePoint.Y);
-                                        lHandColor = getColorFromPixel(this.depthBitmap, (int)depthSpacePoint.X, (int)depthSpacePoint.Y);
+                                        if (trackingState == TrackingState.Tracked)
+                                        {
+                                            lPalmPos = new Point(depthSpacePoint.X, depthSpacePoint.Y);
+                                            lHandColor = getColorFromPixel(this.depthBitmap, (int)depthSpacePoint.X, (int)depthSpacePoint.Y);
+                                        }
                                         break;
                                     
                                     case JointType.WristRight:
-                                        rWristPos = new Point(depthSpacePoint.X, depthSpacePoint.Y);
+                                        if (trackingState == TrackingState.Tracked)
+                                        {
+                                            rWristPos = new Point(depthSpacePoint.X, depthSpacePoint.Y);
+                                        }
                                         break;
 
                                     case JointType.WristLeft:
-                                        lWristPos = new Point(depthSpacePoint.X, depthSpacePoint.Y);
+                                        if (trackingState == TrackingState.Tracked)
+                                        {
+                                            lWristPos = new Point(depthSpacePoint.X, depthSpacePoint.Y);
+                                        }
                                         break;
 
-                                    case JointType.ThumbRight:
-                                        rThumbPos = new Point(depthSpacePoint.X, depthSpacePoint.Y);
-                                        break;
-
-                                    case JointType.ThumbLeft:
-                                        lThumbPos = new Point(depthSpacePoint.X, depthSpacePoint.Y);
-                                        break;
 
                                 }
 
@@ -980,7 +983,7 @@ namespace Microsoft.Samples.Kinect.DepthBasics
             // the bounds of the rectangle
             int xStart  = (palmPosX - size) > 0 ? (palmPosX - size) : 0; 
             int yStart  = (palmPosY - size) > 0 ? (palmPosY - size) : 0;
-            int xEnd    = (xStart + size * 2) <= this.displayWidth ? xStart + size * 2 : this.displayWidth;
+            int xEnd    = (xStart + size * 2) <= this.displayWidth ? xStart + size * 2 : this.displayWidth; // size *2 since we go from -size to size when we draw the rectangle
             int yEnd    = (yStart + size * 2) <= this.displayHeight ? yStart + size * 2 : this.displayHeight;
             for (int x = xStart; x <= xEnd; x++)
             {
