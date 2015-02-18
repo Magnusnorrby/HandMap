@@ -731,24 +731,99 @@ namespace Microsoft.Samples.Kinect.DepthBasics
         {
             int x = palmPosX - wristPosX;
             int y = palmPosY - wristPosY;
+            int width = 40;
+            // the ratio between width and divi,divj decides the distance between searched pixels
+            int divi = 20;
+            int divj = 40;
 
-            for (int i = 0; i < 20; i++)  // a line from the wrist to the palm
-            {
-                int index = (int)wristPosX + (x * i / 20) + ((y * i / 20) + (int)wristPosY) * this.displayWidth;
-                if (index > 0 & index < range)
-                    this.depthPixels[index] = 5; //color it red
-            }
+            //for (int i = 0; i < 20; i++)  // a line from the wrist to the palm
+            //{
+            //    int index = (int)wristPosX + (x * i / 20) + ((y * i / 20) + (int)wristPosY) * this.displayWidth;
+            //    if (index > 0 & index < range)
+            //        this.depthPixels[index] = 5; //color it red
+            //}
 
-            for (int i = -20; i < 20; i++) // a perpendicular line starting at the palm
+            int max = 0;
+            int averageDist = 0;
+            int averageDistSize = 0; //all columns wont hit since we make it extra wide
+
+            Point tip = new Point(0, 0);
+            int index;
+
+            for (int i = -width; i < width; i++) 
             {
-                int index = (int)palmPosX - (y * i / 20) + ((x * i / 20) + (int)palmPosY) * this.displayWidth;
-                if (index > 0 & index < range)
-                    this.depthPixels[index] = 5; //color it red
-                //index = (int)palmPosX + 2*x - (y * i / 20) + ((x * i / 20) + (int)palmPosY + 2*y) * this.displayWidth;
+                
+                //index = (int)palmPosX - (y * i / divi) + ((x * i / divi) + (int)palmPosY) * this.displayWidth; // a perpendicular line starting at the palm
                 //if (index > 0 & index < range)
                 //    this.depthPixels[index] = 5; //color it red
 
+                int distance = 0;
+                int tempX = 0;
+                int tempY = 0;
+                // a box from the perpendicular line and forward, attempting to box in middle finger
+                for (int j = 120; j > 0; j--) // should over shoot the hand
+                {
+                    tempX = (int)palmPosX + -(y * i / divi) + (x * j / divj);
+                    tempY = ((x * i / divi)+(y * j / divj) + (int)palmPosY);
+
+                    index = tempX +  tempY * this.displayWidth;
+                    if (index > 0 & index < range){
+                        if (this.depthPixels[index] != 7 & this.depthPixels[index] != 5) //ignore black and the red rectangle
+                        {
+                            distance = j;
+                            averageDist += j;
+                            averageDistSize += 1;
+                            break;
+                        }
+                    }
+                }
+
+                if (distance > max)
+                {
+                    max = distance;
+                    tip.X = tempX;
+                    tip.Y = tempY;
+                }
+                   
+
             }
+
+            if (averageDistSize > 0)
+            {
+                averageDist = averageDist / (averageDistSize);
+
+                //for (int i = -width; i < width; i++) // a perpendicular line at the average distance (finger root)
+                //{
+                //    int index = (int)palmPosX + -(y * i / divi) + (x * averageDist / divj) + ((x * i / divi) + (y * averageDist / divj) + (int)palmPosY) * this.displayWidth;
+                //    if (index > 0 & index < range)
+                //        this.depthPixels[index] = 5; //color it red
+                //}
+
+                //for (int i = -width; i < width; i++) // a perpendicular line at the furthest finger tip
+                //{
+                //    int index = (int)palmPosX + -(y * i / divi) + (x * max / divj) + ((x * i / divi) + (y * max / divj) + (int)palmPosY) * this.displayWidth;
+                //    if (index > 0 & index < range)
+                //        this.depthPixels[index] = 5; //color it red
+                //}
+
+
+
+                if ((float)max / averageDist>1.5) // we found a finger
+                {
+                    int r = 5;
+                    for (double i = 0; i < 2 * Math.PI; i += 0.25) // a circle around the furthest finger tip
+                    {
+                        index = (int)(tip.X + Math.Cos(i) * r) + (int)(tip.Y + Math.Sin(i) * r) * this.displayWidth;
+                        if (index > 0 & index < range)
+                            this.depthPixels[index] = 5; //color it red
+                    }
+                }
+                
+            }
+           
+
+           
+
 
         }
 
