@@ -811,9 +811,15 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                 if ((float)max / averageDist>1.5) // we found a finger
                 {
                     int r = 5;
-                    for (double i = 0; i < 2 * Math.PI; i += 0.25) // a circle around the furthest finger tip
+                    for (double i = 0; i < 2 * Math.PI; i += 0.1) // a circle around the furthest finger tip
                     {
                         index = (int)(tip.X + Math.Cos(i) * r) + (int)(tip.Y + Math.Sin(i) * r) * this.displayWidth;
+                        if (index > 0 & index < range)
+                            this.depthPixels[index] = 5; //color it red
+                        index = (int)(tip.X + Math.Cos(i) * r) +1 + (int)(tip.Y + Math.Sin(i) * r) * this.displayWidth;
+                        if (index > 0 & index < range)
+                            this.depthPixels[index] = 5; //color it red
+                        index = (int)(tip.X + Math.Cos(i) * r) + (int)(tip.Y + Math.Sin(i) * r +1 ) * this.displayWidth;
                         if (index > 0 & index < range)
                             this.depthPixels[index] = 5; //color it red
                     }
