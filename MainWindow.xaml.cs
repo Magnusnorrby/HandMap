@@ -736,28 +736,32 @@ namespace Microsoft.Samples.Kinect.DepthBasics
             int divi = 20;
             int divj = 40;
 
+            int index;
+
             //for (int i = 0; i < 20; i++)  // a line from the wrist to the palm
             //{
-            //    int index = (int)wristPosX + (x * i / 20) + ((y * i / 20) + (int)wristPosY) * this.displayWidth;
+            //    index = (int)wristPosX + (x * i / 20) + ((y * i / 20) + (int)wristPosY) * this.displayWidth;
             //    if (index > 0 & index < range)
             //        this.depthPixels[index] = 5; //color it red
             //}
 
-            int max = 0;
+            int sumDist = 0;
             int averageDist = 0;
-            int averageDistSize = 0; //all columns wont hit since we make it extra wide
+            int sumDistSize = 0; //all columns wont hit since we make it extra wide
+
+            int[] distArray = new int[width * 2]; // ranges from -width to +width
+            Point[] pointArray = new Point[width * 2];
 
             Point tip = new Point(0, 0);
-            int index;
+            
 
             for (int i = -width; i < width; i++) 
             {
-                
+
                 //index = (int)palmPosX - (y * i / divi) + ((x * i / divi) + (int)palmPosY) * this.displayWidth; // a perpendicular line starting at the palm
                 //if (index > 0 & index < range)
                 //    this.depthPixels[index] = 5; //color it red
 
-                int distance = 0;
                 int tempX = 0;
                 int tempY = 0;
                 // a box from the perpendicular line and forward, attempting to box in middle finger
@@ -770,50 +774,77 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                     if (index > 0 & index < range){
                         if (this.depthPixels[index] != 7 & this.depthPixels[index] != 5) //ignore black and the red rectangle
                         {
-                            distance = j;
-                            averageDist += j;
-                            averageDistSize += 1;
+                            distArray[i + width]  = j;
+                            pointArray[i + width] = new Point(tempX, tempY);
+
+                            sumDist += j;
+                            sumDistSize += 1;
                             break;
                         }
                     }
-                }
-
-                if (distance > max)
-                {
-                    max = distance;
-                    tip.X = tempX;
-                    tip.Y = tempY;
-                }
-                   
+                }               
 
             }
 
-            if (averageDistSize > 0)
+            if (sumDistSize > 0)
             {
-                averageDist = averageDist / (averageDistSize);
+                averageDist = sumDist / (sumDistSize);
 
-                //for (int i = -width; i < width; i++) // a perpendicular line at the average distance (finger root)
+                float coef = 1.4f;
+                float limit =  averageDist * coef; // the limit distance for what we accept as a finger
+
+                //for (int i = -width; i < width; i++) // a perpendicular line at the limit distance 
                 //{
-                //    int index = (int)palmPosX + -(y * i / divi) + (x * averageDist / divj) + ((x * i / divi) + (y * averageDist / divj) + (int)palmPosY) * this.displayWidth;
+                //    index = (int)palmPosX + -(y * i / divi) + (x * (int)limit / divj) + ((x * i / divi) + (y * (int)limit / divj) + (int)palmPosY) * this.displayWidth;
                 //    if (index > 0 & index < range)
                 //        this.depthPixels[index] = 5; //color it red
                 //}
 
-                //for (int i = -width; i < width; i++) // a perpendicular line at the furthest finger tip
-                //{
-                //    int index = (int)palmPosX + -(y * i / divi) + (x * max / divj) + ((x * i / divi) + (y * max / divj) + (int)palmPosY) * this.displayWidth;
-                //    if (index > 0 & index < range)
-                //        this.depthPixels[index] = 5; //color it red
-                //}
-
-
-
-                if ((float)max / averageDist>1.5) // we found a finger
+            for (int i = 0; i < 3; i++) //3 since the thumb has a different angle and the pinky is to short
                 {
+
+                    int max = 0;
+                    int maxIndex = 0;
+                    for(int j=0; j < distArray.Length; j++){ //finds the furthest tip
+                        if(distArray[j]>max){
+                            max = distArray[j];
+                            maxIndex = j;
+                        }
+                    }
+
+                    if ((float)max > limit) 
+                    {
+                        drawFingerTip(max, range, pointArray[maxIndex]); // we found a finger
+                        coef -= 0.1f;
+                        limit = averageDist * coef;
+                    }
+                    else
+                    {
+                        break; //no fingers left
+                    }
+                        
+                    int tipSize = 7;
+                    int start = (maxIndex > width) ? width : maxIndex; //remove values from the middle to the detected tip + the size of the tip
+                    int end =   (maxIndex > width) ? maxIndex : width;
+                    for (int j = start - tipSize; j <= end + tipSize; j++) //remove values from the finger so we dont mark it twice
+                    {
+                        if (j >= 0 & j < distArray.Length)
+                        {
+                            distArray[j] = averageDist;
+                        }
+                            
+                    }
+                    
+                }
+            }
+        }
+
+        private void drawFingerTip(int max, int range, Point tip){                         
+
                     int r = 5;
                     for (double i = 0; i < 2 * Math.PI; i += 0.1) // a circle around the furthest finger tip
                     {
-                        index = (int)(tip.X + Math.Cos(i) * r) + (int)(tip.Y + Math.Sin(i) * r) * this.displayWidth;
+                        int index = (int)(tip.X + Math.Cos(i) * r) + (int)(tip.Y + Math.Sin(i) * r) * this.displayWidth;
                         if (index > 0 & index < range)
                             this.depthPixels[index] = 5; //color it red
                         index = (int)(tip.X + Math.Cos(i) * r) +1 + (int)(tip.Y + Math.Sin(i) * r) * this.displayWidth;
@@ -823,14 +854,8 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                         if (index > 0 & index < range)
                             this.depthPixels[index] = 5; //color it red
                     }
-                }
-                
-            }
+                        
            
-
-           
-
-
         }
 
         /// <summary>
@@ -859,16 +884,6 @@ namespace Microsoft.Samples.Kinect.DepthBasics
 
             // defines the rectangle size
             int size = 60;
-
-            //used to track the borders of the hand
-            int[][] imageArray = new int[this.displayWidth][];
-            for (int i = 0; i < this.displayWidth; i++)
-            {
-                imageArray[i] = new int[this.displayHeight];
-            }
-
-            int xp = 0;
-            int yp = 0;
 
             bool handBorder = true;
             bool oldHandBorder;
@@ -938,9 +953,6 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                             if (i < (index + 20 * this.displayWidth))
                             {
                                 this.depthPixels[i] = 5; //color it red
-                                yp = i / this.displayWidth;
-                                xp = i - yp * this.displayWidth;
-                                imageArray[xp][yp] = 1;
                             }
 
                         }
