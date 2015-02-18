@@ -971,17 +971,20 @@ namespace Microsoft.Samples.Kinect.DepthBasics
 
             ushort palmDepth = frameData[index];
 
-            // defines the rectangle size
+            // defines the size of the red rectangle
             int size = 60;
 
             bool handBorder = true;
             bool oldHandBorder;
 
-            int xLower = (palmPosX - size) > 0 ? (palmPosX - size) : 0;
-            int yLower = (palmPosY - size) > 0 ? (palmPosY - size) : 0;
-            for (int x = xLower; x < xLower + size*2; x++)
+            // the bounds of the rectangle
+            int xStart  = (palmPosX - size) > 0 ? (palmPosX - size) : 0; 
+            int yStart  = (palmPosY - size) > 0 ? (palmPosY - size) : 0;
+            int xEnd    = (xStart + size * 2) <= this.displayWidth ? xStart + size * 2 : this.displayWidth;
+            int yEnd    = (yStart + size * 2) <= this.displayHeight ? yStart + size * 2 : this.displayHeight;
+            for (int x = xStart; x <= xEnd; x++)
             {
-                for (int y = yLower; y < yLower + size*2; y++)
+                for (int y = yStart; y <= yEnd; y++)
                 {
                     int i = x + y * this.displayWidth;
                     if (i < frameDataLength)
@@ -1058,17 +1061,18 @@ namespace Microsoft.Samples.Kinect.DepthBasics
            
             for (int i = -size; i < size; i++)
                 {
+                    
                     safe = palmPosX + i + (palmPosY + size) * this.displayWidth;
-                    if (safe > 0 & safe < frameDataLength)
+                    if (safe > 0 & safe < frameDataLength & palmPosX + i < this.displayWidth & palmPosX + i> 0) // makes sure that all coordinates are within the screen
                         this.depthPixels[safe] = 5;
                     safe = palmPosX + i + (palmPosY - size) * this.displayWidth;
-                    if (safe > 0 & safe < frameDataLength)
+                    if (safe > 0 & safe < frameDataLength & palmPosX + i < this.displayWidth & palmPosX + i > 0)
                         this.depthPixels[safe] = 5;
                     safe = palmPosX + size + (palmPosY + i) * this.displayWidth;
-                    if (safe > 0 & safe < frameDataLength)
+                    if (safe > 0 & safe < frameDataLength & palmPosX + size < this.displayWidth & palmPosX + size > 0)
                         this.depthPixels[safe] = 5;
                     safe = palmPosX - size + (palmPosY - i) * this.displayWidth;
-                    if (safe > 0 & safe < frameDataLength)
+                    if (safe > 0 & safe < frameDataLength & palmPosX - size < this.displayWidth & palmPosX - size > 0)
                         this.depthPixels[safe] = 5;
                 }
 
