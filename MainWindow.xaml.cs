@@ -21,7 +21,7 @@ namespace Microsoft.Samples.Kinect.DepthBasics
         /// Map depth range to byte range
         /// </summary>
         private const int MapDepthToByte = 8000 / 256;
-        
+
         /// <summary>
         /// Active Kinect sensor
         /// </summary>
@@ -46,7 +46,7 @@ namespace Microsoft.Samples.Kinect.DepthBasics
         /// Bitmap to display (RGB)
         /// </summary>
         private WriteableBitmap colorBitmap = null;
-            
+
         /// <summary>
         /// Bitmap to display
         /// </summary>
@@ -101,8 +101,8 @@ namespace Microsoft.Samples.Kinect.DepthBasics
         /// Transperent background color
         /// </summary>
         private Brush bgColor = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0));
-        
-        
+
+
 
         /// <summary>
         /// Thickness of drawn joint lines
@@ -160,6 +160,16 @@ namespace Microsoft.Samples.Kinect.DepthBasics
         /// </summary>
         private Point lWristPos;
 
+        /// <summary>
+        /// The tracking states of the rPalmPos, lPalmPos, rWristPos, lWristPos
+        /// </summary>
+        private TrackingState[] trackingStates = new TrackingState[4];
+
+        /// <summary>
+        /// TackingId for the person driving the app
+        /// </summary>
+        private long driver = 0;
+
 
         /// <summary>
         /// Intermediate storage for the color to depth mapping
@@ -214,22 +224,22 @@ namespace Microsoft.Samples.Kinect.DepthBasics
             this.depthPixels = new byte[this.depthFrameDescription.Width * this.depthFrameDescription.Height];
 
             List<Color> colorList = new List<Color>();
-            colorList.Add(Color.FromArgb(255,0, 0, 255));
-            colorList.Add(Color.FromArgb(255,0, 255, 0));
-            colorList.Add(Color.FromArgb(255,70, 200, 0));
-            colorList.Add(Color.FromArgb(255,100, 180, 0));
-            colorList.Add(Color.FromArgb(255,200, 100, 0));
-            colorList.Add(Color.FromArgb(255,230, 70, 0));
-            colorList.Add(Color.FromArgb(255,255, 0, 0));
-            colorList.Add(Color.FromArgb(255, 0, 0, 0));
+            colorList.Add(Color.FromArgb(255, 0, 0, 255));
+            colorList.Add(Color.FromArgb(255, 0, 255, 0));
+            colorList.Add(Color.FromArgb(255, 70, 200, 0));
+            colorList.Add(Color.FromArgb(255, 100, 180, 0));
+            colorList.Add(Color.FromArgb(255, 200, 100, 0));
+            colorList.Add(Color.FromArgb(255, 230, 70, 0));
+            colorList.Add(Color.FromArgb(255, 255, 0, 0));
+            colorList.Add(Color.FromArgb(0, 0, 0, 0));
 
 
 
             BitmapPalette bp = new BitmapPalette(colorList);
-                
+
             // create the bitmap to display            
             this.depthBitmap = new WriteableBitmap(this.depthFrameDescription.Width, this.depthFrameDescription.Height, 96.0, 96.0, PixelFormats.Indexed8, bp);
-           
+
             // open the reader for the body frames
             this.bodyFrameReader = this.kinectSensor.BodyFrameSource.OpenReader();
 
@@ -256,7 +266,7 @@ namespace Microsoft.Samples.Kinect.DepthBasics
 
             // Create an image source that we can use in our image control
             this.jointSource = new DrawingImage(this.drawingGroup);
-           
+
 
             // set IsAvailableChanged event notifier
             this.kinectSensor.IsAvailableChanged += this.Sensor_IsAvailableChanged;
@@ -275,7 +285,7 @@ namespace Microsoft.Samples.Kinect.DepthBasics
             this.InitializeComponent();
 
 
-            
+
         }
 
         /// <summary>
@@ -341,12 +351,31 @@ namespace Microsoft.Samples.Kinect.DepthBasics
             }
         }
 
+
+        /// <summary>
+        /// Execute shutdown tasks
+        /// </summary>
+        /// <param name="sender">object sending the event</param>
+        /// <param name="e">event arguments</param>
+        private void Button_Close(object sender, RoutedEventArgs e)
+        {
+            CleanUp();
+            this.Close();
+        }
         /// <summary>
         /// Execute shutdown tasks
         /// </summary>
         /// <param name="sender">object sending the event</param>
         /// <param name="e">event arguments</param>
         private void MainWindow_Closing(object sender, CancelEventArgs e)
+        {
+            CleanUp();
+        }
+
+        /// <summary>
+        /// Destructor
+        /// </summary>
+        private void CleanUp()
         {
             if (this.depthFrameReader != null)
             {
@@ -374,9 +403,10 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                 this.kinectSensor.Close();
                 this.kinectSensor = null;
             }
+
         }
 
-      
+
 
         /// <summary>
         /// Handles the color frame data arriving from the sensor
@@ -412,9 +442,9 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                 }
             }
 
-         
 
-            
+
+
 
         }
 
@@ -499,7 +529,7 @@ namespace Microsoft.Samples.Kinect.DepthBasics
 
                             // If you wish to filter by reliable depth distance, uncomment the following line:
                             ushort maxDepth = depthFrame.DepthMaxReliableDistance;
-                          
+
                             this.ProcessDepthFrameData(depthBuffer.UnderlyingBuffer, depthBuffer.Size);
                             depthFrameProcessed = true;
                         }
@@ -548,6 +578,8 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                 {
                     // Draw a transparent background to set the render size
                     dc.DrawRectangle(bgColor, null, new Rect(0.0, 0.0, this.displayWidth, this.displayHeight));
+
+                    bool driverExists = false;
                     foreach (Body body in this.bodies)
                     {
                         Pen drawPen = this.bodyPen;
@@ -555,71 +587,90 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                         if (body.IsTracked)
                         {
 
-                            IReadOnlyDictionary<JointType, Joint> joints = body.Joints;
-                            // convert the joint points to depth (display) space
-                            Dictionary<JointType, Point> jointPoints = new Dictionary<JointType, Point>();
-                            foreach (JointType jointType in joints.Keys)
+                            if (driver == 0) //if no driver has been assigned we assign one
                             {
+                                driver = (long)body.TrackingId;
+                            }
+                            if (driver == (long)body.TrackingId) //Makes sure we only track one persons hands 
+                            {
+                                driverExists = true;
+                                IReadOnlyDictionary<JointType, Joint> joints = body.Joints;
 
-                                TrackingState trackingState = joints[jointType].TrackingState;
-                                // sometimes the depth(Z) of an inferred joint may show as negative
-                                // clamp down to 0.1f to prevent coordinatemapper from returning (-Infinity, -Infinity)
-                                CameraSpacePoint position = joints[jointType].Position;
-                                if (position.Z < 0)
+                                Dictionary<JointType, Point> jointPoints = new Dictionary<JointType, Point>();
+                                foreach (JointType jointType in joints.Keys)
                                 {
-                                    position.Z = InferredZPositionClamp;
+
+                                    TrackingState trackingState = joints[jointType].TrackingState;
+                                    // sometimes the depth(Z) of an inferred joint may show as negative
+                                    // clamp down to 0.1f to prevent coordinatemapper from returning (-Infinity, -Infinity)
+                                    CameraSpacePoint position = joints[jointType].Position;
+                                    if (position.Z < 0)
+                                    {
+                                        position.Z = InferredZPositionClamp;
+                                    }
+
+                                    // convert the joint points to depth (display) space
+                                    DepthSpacePoint depthSpacePoint = this.coordinateMapper.MapCameraPointToDepthSpace(position);
+                                    jointPoints[jointType] = new Point(depthSpacePoint.X, depthSpacePoint.Y);
+
+                                    //ColorSpacePoint colorSpacePoint;
+                                    //colorSpacePoint = this.coordinateMapper.MapCameraPointToColorSpace(position);
+                                    //new Point(colorSpacePoint.X,colorSpacePoint.Y);
+                                    //getColorFromPixel(this.depthBitmap, (int)colorSpacePoint.X, (int)colorSpacePoint.Y);
+
+
+                                    switch (jointType)
+                                    {
+                                        //Try to find the deepth coordianates of the hand
+                                        case JointType.HandRight:
+                                            //update the tracking state 
+                                            trackingStates[0] = trackingState;
+                                            if (trackingState == TrackingState.Tracked) //requiring the joint to be tracked saves jumpy behavior when Kinect guesses
+                                            {
+                                                rPalmPos = new Point(depthSpacePoint.X, depthSpacePoint.Y);
+                                                rHandColor = getColorFromPixel(this.depthBitmap, (int)depthSpacePoint.X, (int)depthSpacePoint.Y);
+                                            }
+
+                                            break;
+
+                                        
+                                        case JointType.HandLeft:
+                                            trackingStates[1] = trackingState;
+                                            if (trackingState == TrackingState.Tracked)
+                                            {
+                                                lPalmPos = new Point(depthSpacePoint.X, depthSpacePoint.Y);
+                                                lHandColor = getColorFromPixel(this.depthBitmap, (int)depthSpacePoint.X, (int)depthSpacePoint.Y);
+                                            }
+                                            break;
+
+                                        case JointType.WristRight:
+                                            trackingStates[2] = trackingState;
+                                            if (trackingState == TrackingState.Tracked)
+                                            {
+                                                rWristPos = new Point(depthSpacePoint.X, depthSpacePoint.Y);
+                                            }
+                                            break;
+
+                                        case JointType.WristLeft:
+                                            trackingStates[3] = trackingState;
+                                            if (trackingState == TrackingState.Tracked)
+                                            {
+                                                lWristPos = new Point(depthSpacePoint.X, depthSpacePoint.Y);
+                                            }
+                                            break;
+
+
+                                    }
+
                                 }
 
-                                DepthSpacePoint depthSpacePoint = this.coordinateMapper.MapCameraPointToDepthSpace(position);
-                                jointPoints[jointType] = new Point(depthSpacePoint.X, depthSpacePoint.Y);
-
-                                //ColorSpacePoint colorSpacePoint;
-                                //colorSpacePoint = this.coordinateMapper.MapCameraPointToColorSpace(position);
-                                //new Point(colorSpacePoint.X,colorSpacePoint.Y);
-                                //getColorFromPixel(this.depthBitmap, (int)colorSpacePoint.X, (int)colorSpacePoint.Y);
-
-                                switch (jointType)
-                                {
-                                    //Try to find the deepth coordianates of the hand
-                                    case JointType.HandRight:
-
-                                        if (trackingState == TrackingState.Tracked) //requiring the joint to be tracked saves jumpy behavior when Kinect guesses
-                                        {
-                                            rPalmPos = new Point(depthSpacePoint.X, depthSpacePoint.Y);
-                                            rHandColor = getColorFromPixel(this.depthBitmap, (int)depthSpacePoint.X, (int)depthSpacePoint.Y);
-                                        }
-                                    
-                                        break;
-
-                                    case JointType.HandLeft:
-                                        if (trackingState == TrackingState.Tracked)
-                                        {
-                                            lPalmPos = new Point(depthSpacePoint.X, depthSpacePoint.Y);
-                                            lHandColor = getColorFromPixel(this.depthBitmap, (int)depthSpacePoint.X, (int)depthSpacePoint.Y);
-                                        }
-                                        break;
-                                    
-                                    case JointType.WristRight:
-                                        if (trackingState == TrackingState.Tracked)
-                                        {
-                                            rWristPos = new Point(depthSpacePoint.X, depthSpacePoint.Y);
-                                        }
-                                        break;
-
-                                    case JointType.WristLeft:
-                                        if (trackingState == TrackingState.Tracked)
-                                        {
-                                            lWristPos = new Point(depthSpacePoint.X, depthSpacePoint.Y);
-                                        }
-                                        break;
-
-
-                                }
-
+                                //this.DrawBody(joints, jointPoints, dc, drawPen);
                             }
 
-                            //this.DrawBody(joints, jointPoints, dc, drawPen);
-
+                            if (!driverExists)  // no driver exists, reset the driver id so we can find a new driver
+                            {
+                                driver = 0;
+                            }
 
                             // prevent drawing outside of our render area
                             this.drawingGroup.ClipGeometry = new RectangleGeometry(new Rect(0.0, 0.0, this.displayWidth, this.displayHeight));
@@ -627,7 +678,7 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                         }
                     }
 
-                   
+
                 }
             }
         }
@@ -707,6 +758,10 @@ namespace Microsoft.Samples.Kinect.DepthBasics
         private unsafe void ProcessDepthFrameData(IntPtr depthFrameData, uint depthFrameDataSize)
         {
 
+            //ReadOnlyDictionary<JointType, Joint> joints = body.Joints;
+
+
+
             int frameDataLength = (int)(depthFrameDataSize / this.depthFrameDescription.BytesPerPixel);
 
             // convert depth to a visual representation
@@ -716,28 +771,24 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                 this.depthPixels[i] = 7; // sets a pixels to a default black
 
             }
-           
-            // right hand
-            mapHand(frameDataLength, depthFrameData, (int)rPalmPos.X, (int)rPalmPos.Y);
-            
 
-            // left hand
-            mapHand(frameDataLength, depthFrameData, (int)lPalmPos.X , (int)lPalmPos.Y);
+            if (trackingStates[0] == TrackingState.Tracked && trackingStates[2] == TrackingState.Tracked) // we are tracking both the right palm and wrist
+            {
+                // right hand
+                mapHand(frameDataLength, depthFrameData, (int)rPalmPos.X, (int)rPalmPos.Y);
+                findFingers((int)rPalmPos.X, (int)rPalmPos.Y, (int)rWristPos.X, (int)rWristPos.Y, frameDataLength);
+                findThumb((int)rPalmPos.X, (int)rPalmPos.Y, (int)rWristPos.X, (int)rWristPos.Y, frameDataLength, 1, -1);
+            }
 
 
-            // right hand
-            findFingers((int)rPalmPos.X, (int)rPalmPos.Y, (int)rWristPos.X, (int)rWristPos.Y, frameDataLength);
+            if (trackingStates[1] == TrackingState.Tracked && trackingStates[3] == TrackingState.Tracked) // we are tracking both the left palm and wrist
+            {
+                // left hand
+                mapHand(frameDataLength, depthFrameData, (int)lPalmPos.X, (int)lPalmPos.Y);
+                findFingers((int)lPalmPos.X, (int)lPalmPos.Y, (int)lWristPos.X, (int)lWristPos.Y, frameDataLength);
+                findThumb((int)lPalmPos.X, (int)lPalmPos.Y, (int)lWristPos.X, (int)lWristPos.Y, frameDataLength, -1, 1);
+            }
 
-            // left hand
-            findFingers((int)lPalmPos.X, (int)lPalmPos.Y, (int)lWristPos.X, (int)lWristPos.Y, frameDataLength);
-
-            // right thumb
-            findThumb((int)rPalmPos.X, (int)rPalmPos.Y, (int)rWristPos.X, (int)rWristPos.Y, frameDataLength, 1, -1);
-            
-
-            // left thumb
-            findThumb((int)lPalmPos.X, (int)lPalmPos.Y, (int)lWristPos.X, (int)lWristPos.Y, frameDataLength , -1, 1);
-            
         }
 
 
@@ -751,7 +802,7 @@ namespace Microsoft.Samples.Kinect.DepthBasics
         /// <param name="frameDataLength">Size of the DepthFrame image data in pixels</param>
         /// <param name="d1">The direction variable for the thumb</param> //We presume that the right thumb is to the left of the hand and vice versa 
         /// <param name="d2">The direction variable the thumb</param>
-        private void findThumb(int palmPosX, int palmPosY, int wristPosX, int wristPosY, int range, int d1, int d2) 
+        private void findThumb(int palmPosX, int palmPosY, int wristPosX, int wristPosY, int range, int d1, int d2)
         {
             int x = palmPosX - wristPosX;
             int y = palmPosY - wristPosY;
@@ -765,7 +816,7 @@ namespace Microsoft.Samples.Kinect.DepthBasics
 
             int index;
 
-            for (int i = 0; i < 30; i++) 
+            for (int i = 0; i < 30; i++)
             {
                 //index = wristPosX + (x * i / 20) + ((y * i / 20) + wristPosY) * this.displayWidth;  // a line crossing both the center of the wrist and the center of the palm
                 //if (index > 0 & index < range)
@@ -781,8 +832,9 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                 {
                     tempX = wristPosX + d1 * (y * j / 20) + (x * i / 20);
                     tempY = (d2 * (x * j / 20) + (y * i / 20) + wristPosY);
-                    index = tempX +  tempY * this.displayWidth;
-                    if (index > 0 & index < range){
+                    index = tempX + tempY * this.displayWidth;
+                    if (index > 0 & index < range)
+                    {
                         if (this.depthPixels[index] != 7 & this.depthPixels[index] != 5) //ignore black background and the red rectangle
                         {
                             distance = j;
@@ -791,7 +843,7 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                             break;
                         }
                     }
-                         
+
                 }
                 if (distance > max)
                 {
@@ -801,13 +853,14 @@ namespace Microsoft.Samples.Kinect.DepthBasics
 
                 }
             }
-            if(sumDistSize>0){
-                 if(max > 1.3*sumDist/sumDistSize) // the thumb is stretched far enough
+            if (sumDistSize > 0)
+            {
+                if (max > 1.3 * sumDist / sumDistSize) // the thumb is stretched far enough
                     drawFingerTip(range, thumb, 0); // 0 draws the thumb circle blue
             }
-          
 
-            
+
+
         }
 
         /// <summary>
@@ -827,7 +880,7 @@ namespace Microsoft.Samples.Kinect.DepthBasics
             int divi = 20;
             int divj = 40;
 
-            
+
 
             int sumDist = 0;
             int averageDist = 0;
@@ -839,7 +892,7 @@ namespace Microsoft.Samples.Kinect.DepthBasics
             Point tip = new Point(0, 0);
 
             int index;
-            for (int i = -width; i < width; i++) 
+            for (int i = -width; i < width; i++)
             {
 
                 //index = (int)palmPosX - (y * i / divi) + ((x * i / divi) + (int)palmPosY) * this.displayWidth; // a perpendicular line starting at the palm
@@ -852,13 +905,14 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                 for (int j = 120; j > 0; j--) // should over shoot the hand
                 {
                     tempX = palmPosX + -(y * i / divi) + (x * j / divj);
-                    tempY = ((x * i / divi)+(y * j / divj) + palmPosY);
+                    tempY = ((x * i / divi) + (y * j / divj) + palmPosY);
 
-                    index = tempX +  tempY * this.displayWidth;
-                    if (index > 0 & index < range){
+                    index = tempX + tempY * this.displayWidth;
+                    if (index > 0 & index < range)
+                    {
                         if (this.depthPixels[index] != 7 & this.depthPixels[index] != 5) //ignore black background and the red rectangle
                         {
-                            distArray[i + width]  = j;
+                            distArray[i + width] = j;
                             pointArray[i + width] = new Point(tempX, tempY);
 
                             sumDist += j;
@@ -866,7 +920,7 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                             break;
                         }
                     }
-                }               
+                }
 
             }
 
@@ -875,7 +929,7 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                 averageDist = sumDist / sumDistSize;
 
                 float coef = 1.4f;
-                float limit =  averageDist * coef; // the limit distance for what we accept as a finger
+                float limit = averageDist * coef; // the limit distance for what we accept as a finger
 
                 //for (int i = -width; i < width; i++) // a perpendicular line at the limit distance 
                 //{
@@ -884,19 +938,21 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                 //        this.depthPixels[index] = 5; //color it red
                 //}
 
-            for (int i = 0; i < 3; i++) //3 since the thumb has a different angle and the pinky is to short
+                for (int i = 0; i < 3; i++) //3 since the thumb has a different angle and the pinky is to short
                 {
 
                     int max = 0;
                     int maxIndex = 0;
-                    for(int j=0; j < distArray.Length; j++){ //finds the furthest tip
-                        if(distArray[j]>max){
+                    for (int j = 0; j < distArray.Length; j++)
+                    { //finds the furthest tip
+                        if (distArray[j] > max)
+                        {
                             max = distArray[j];
                             maxIndex = j;
                         }
                     }
 
-                    if ((float)max > limit) 
+                    if ((float)max > limit)
                     {
                         drawFingerTip(range, pointArray[maxIndex], 5); // we found a finger
                         coef -= 0.1f; //lower the bar for the next finger while still keeping the bar high when no finger is present
@@ -906,20 +962,20 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                     {
                         break; //no fingers left
                     }
-                        
+
                     int tipSize = 7;
                     int start = (maxIndex > width) ? width : maxIndex; //remove values from the middle to the detected tip + the size of the tip
-                    int end =   (maxIndex > width) ? maxIndex : width;
+                    int end = (maxIndex > width) ? maxIndex : width;
 
-                    for (int j = start - tipSize; j <= end + tipSize; j++) 
+                    for (int j = start - tipSize; j <= end + tipSize; j++)
                     {
                         if (j >= 0 & j < distArray.Length)
                         {
                             distArray[j] = 0; //remove values from the finger so we dont mark it twice
                         }
-                            
+
                     }
-                    
+
                 }
             }
 
@@ -931,23 +987,24 @@ namespace Microsoft.Samples.Kinect.DepthBasics
         /// <param name="range">Size of the DepthFrame image data in pixels</param>
         /// <param name="tip">A point containing the finger tip coordinates</param>
         /// <param name="color">The color of the circle</param>
-        private void drawFingerTip(int range, Point tip, byte color){                         
+        private void drawFingerTip(int range, Point tip, byte color)
+        {
 
-                    int r = 5;
-                    for (double i = 0; i < 2 * Math.PI; i += 0.1) // a circle around the furthest finger tip
-                    {
-                        int index = (int)(tip.X + Math.Cos(i) * r) + (int)(tip.Y + Math.Sin(i) * r) * this.displayWidth; //three calls makes the circle thicker
-                        if (index > 0 & index < range)
-                            this.depthPixels[index] = color; 
-                        index = (int)(tip.X + Math.Cos(i) * r) +1 + (int)(tip.Y + Math.Sin(i) * r) * this.displayWidth;
-                        if (index > 0 & index < range)
-                            this.depthPixels[index] = color; 
-                        index = (int)(tip.X + Math.Cos(i) * r) + (int)(tip.Y + Math.Sin(i) * r +1 ) * this.displayWidth;
-                        if (index > 0 & index < range)
-                            this.depthPixels[index] = color; 
-                    }
-                        
-           
+            int r = 5;
+            for (double i = 0; i < 2 * Math.PI; i += 0.1) // a circle around the furthest finger tip
+            {
+                int index = (int)(tip.X + Math.Cos(i) * r) + (int)(tip.Y + Math.Sin(i) * r) * this.displayWidth; //three calls makes the circle thicker
+                if (index > 0 & index < range)
+                    this.depthPixels[index] = color;
+                index = (int)(tip.X + Math.Cos(i) * r) + 1 + (int)(tip.Y + Math.Sin(i) * r) * this.displayWidth;
+                if (index > 0 & index < range)
+                    this.depthPixels[index] = color;
+                index = (int)(tip.X + Math.Cos(i) * r) + (int)(tip.Y + Math.Sin(i) * r + 1) * this.displayWidth;
+                if (index > 0 & index < range)
+                    this.depthPixels[index] = color;
+            }
+
+
         }
 
         /// <summary>
@@ -960,7 +1017,8 @@ namespace Microsoft.Samples.Kinect.DepthBasics
         /// <param name="depthFrameData">Pointer to the DepthFrame image data</param>       
         /// <param name="palmPosX">The x coordinate of the palm</param>
         /// <param name="palmPosY">The y coordinate of the palm</param>
-        private unsafe void mapHand(int frameDataLength, IntPtr depthFrameData, int palmPosX, int palmPosY){
+        private unsafe void mapHand(int frameDataLength, IntPtr depthFrameData, int palmPosX, int palmPosY)
+        {
 
             int index = (palmPosX) + (palmPosY) * this.displayWidth;
             //make sure we don't go out of bounds
@@ -977,14 +1035,11 @@ namespace Microsoft.Samples.Kinect.DepthBasics
             // defines the size of the red rectangle
             int size = 60;
 
-            bool handBorder = true;
-            bool oldHandBorder;
-
             // the bounds of the rectangle
-            int xStart  = (palmPosX - size) > 0 ? (palmPosX - size) : 0; 
-            int yStart  = (palmPosY - size) > 0 ? (palmPosY - size) : 0;
-            int xEnd    = (xStart + size * 2) <= this.displayWidth ? xStart + size * 2 : this.displayWidth; // size *2 since we go from -size to size when we draw the rectangle
-            int yEnd    = (yStart + size * 2) <= this.displayHeight ? yStart + size * 2 : this.displayHeight;
+            int xStart = (palmPosX - size) > 0 ? (palmPosX - size) : 0;
+            int yStart = (palmPosY - size) > 0 ? (palmPosY - size) : 0;
+            int xEnd = (xStart + size * 2) <= this.displayWidth ? xStart + size * 2 : this.displayWidth; // size *2 since we go from -size to size when we draw the rectangle
+            int yEnd = (yStart + size * 2) <= this.displayHeight ? yStart + size * 2 : this.displayHeight;
             for (int x = xStart; x <= xEnd; x++)
             {
                 for (int y = yStart; y <= yEnd; y++)
@@ -1005,81 +1060,64 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                         //setColorAtPixel(this.colorBitmap, cX, cY);
 
 
-                        oldHandBorder = handBorder;
                         //only colors pixels that are close in depth to our palm depth (depth / MapDepthToByte)
                         switch ((palmDepth - depth) / 25)
                         {
                             case -1: // Behind palm depth, make blue
                                 this.depthPixels[i] = 0; // On palm depth, make green
-                                handBorder = false;
                                 break;
                             case 0:
                                 this.depthPixels[i] = 1; // further forward from palm depth, make red
-                                handBorder = false;
                                 break;
                             case 1:
                                 this.depthPixels[i] = 2;
-                                handBorder = false;
                                 break;
                             case 2:
                                 this.depthPixels[i] = 3;
-                                handBorder = false;
                                 break;
                             case 3:
                                 this.depthPixels[i] = 4;
-                                handBorder = false;
                                 break;
                             case 4:
                                 this.depthPixels[i] = 5;
-                                handBorder = false;
                                 break;
                             case 5:
                                 this.depthPixels[i] = 6;
-                                handBorder = false;
                                 break;
                             default:  // to far away, make black
                                 this.depthPixels[i] = 7;
-                                handBorder = true;
                                 break;
                         }
 
-                        if (oldHandBorder != handBorder) // we found the border
-                        {
-                            if (i < (index + 20 * this.displayWidth))
-                            {
-                                this.depthPixels[i] = 5; //color it red
-                            }
 
-                        }
-                    
                     }
                 }
             }
 
 
-    
 
-            // draws the rectangle
-            int safe = 0;
-           
-            for (int i = -size; i < size; i++)
-                {
-                    
-                    safe = palmPosX + i + (palmPosY + size) * this.displayWidth;
-                    if (safe > 0 & safe < frameDataLength & palmPosX + i < this.displayWidth & palmPosX + i> 0) // makes sure that all coordinates are within the screen
-                        this.depthPixels[safe] = 5;
-                    safe = palmPosX + i + (palmPosY - size) * this.displayWidth;
-                    if (safe > 0 & safe < frameDataLength & palmPosX + i < this.displayWidth & palmPosX + i > 0)
-                        this.depthPixels[safe] = 5;
-                    safe = palmPosX + size + (palmPosY + i) * this.displayWidth;
-                    if (safe > 0 & safe < frameDataLength & palmPosX + size < this.displayWidth & palmPosX + size > 0)
-                        this.depthPixels[safe] = 5;
-                    safe = palmPosX - size + (palmPosY - i) * this.displayWidth;
-                    if (safe > 0 & safe < frameDataLength & palmPosX - size < this.displayWidth & palmPosX - size > 0)
-                        this.depthPixels[safe] = 5;
-                }
 
-       }
+            //// draws the rectangle
+            //int safe = 0;
+
+            //for (int i = -size; i < size; i++)
+            //    {
+
+            //        safe = palmPosX + i + (palmPosY + size) * this.displayWidth;
+            //        if (safe > 0 & safe < frameDataLength & palmPosX + i < this.displayWidth & palmPosX + i> 0) // makes sure that all coordinates are within the screen
+            //            this.depthPixels[safe] = 5;
+            //        safe = palmPosX + i + (palmPosY - size) * this.displayWidth;
+            //        if (safe > 0 & safe < frameDataLength & palmPosX + i < this.displayWidth & palmPosX + i > 0)
+            //            this.depthPixels[safe] = 5;
+            //        safe = palmPosX + size + (palmPosY + i) * this.displayWidth;
+            //        if (safe > 0 & safe < frameDataLength & palmPosX + size < this.displayWidth & palmPosX + size > 0)
+            //            this.depthPixels[safe] = 5;
+            //        safe = palmPosX - size + (palmPosY - i) * this.displayWidth;
+            //        if (safe > 0 & safe < frameDataLength & palmPosX - size < this.displayWidth & palmPosX - size > 0)
+            //            this.depthPixels[safe] = 5;
+            //    }
+
+        }
 
 
         /// <summary>

@@ -3,6 +3,10 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="HandMap" 
         Height="600" Width="1046.854" 
+        WindowState="Maximized"
+        WindowStyle="None"
+        Background="Transparent"
+        AllowsTransparency="True"
         Closing="MainWindow_Closing"> 
   <Window.Resources>
     <SolidColorBrush x:Key="MediumGreyBrush" Color="#ff6e6e6e" />
@@ -13,7 +17,7 @@
     </Style>
    
   </Window.Resources>
-  <Grid Margin="10 0 10 0">
+    <Grid Margin="10 0 10 0">
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto" />
       <RowDefinition Height="*" />
@@ -21,21 +25,22 @@
       <RowDefinition Height="Auto" />
     </Grid.RowDefinitions>
 
-    <Image Grid.Row="0" Source="Images\Logo.png" HorizontalAlignment="Left" Stretch="Fill" Height="32" Width="81" Margin="275,5,0,10" />
-        <TextBlock Grid.Row="0" Margin="0 0 -1 0" HorizontalAlignment="Right" VerticalAlignment="Bottom" Foreground="{StaticResource MediumGreyBrush}" FontFamily="Segoe UI" FontSize="18">HandMap</TextBlock>
-
-      <Grid Grid.Row="1" HorizontalAlignment="Left" Margin="0,10,0,187">
-            <Image Source="{Binding DepthSource}" Stretch="None" />            
-            <Image Source="{Binding JointSource}" Stretch="None"/>
+        <Grid Grid.Row="0" Background="White">
+            <Image  Source="Images\Logo.png" HorizontalAlignment="Left" Stretch="Fill" Height="32" Width="81" Margin="275,5,0,10" />
+            <TextBlock Margin="0,0,108,13" HorizontalAlignment="Right" VerticalAlignment="Bottom" Foreground="{StaticResource KinectPurpleBrush}" FontFamily="Segoe UI" FontSize="18" RenderTransformOrigin="-0.098,0.507">HandMap</TextBlock>
+            <Button Width="47" Height="47" HorizontalAlignment="Right" RenderTransformOrigin="20.928,0.166" Click="Button_Close">x</Button>
+        </Grid>
+    <Grid Grid.Row="1" HorizontalAlignment="Center">
+            <Image Source="{Binding DepthSource}" Stretch="UniformToFill" />            
+            <Image Source="{Binding JointSource}" Stretch="UniformToFill"/>
      </Grid>
-        
-      
-    <Viewbox Grid.Row="1" HorizontalAlignment="Right" Margin="0,10,0,187">
+
+
+        <!--<Viewbox Grid.Row="2" HorizontalAlignment="Center">
             <Grid>
-                <Image Source="{Binding ImageSource}" Stretch="UniformToFill"/>
-                
+                <Image Source="{Binding ImageSource}" Stretch="UniformToFill"/>                
             </Grid>
-        </Viewbox>
+        </Viewbox>-->
 
 
         <StatusBar Grid.Row="3" HorizontalAlignment="Stretch" Name="statusBar" VerticalAlignment="Bottom" Background="White" Foreground="{StaticResource MediumGreyBrush}">
