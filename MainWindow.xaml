@@ -5,35 +5,37 @@
         Height="600" Width="1046.854" 
         WindowState="Maximized"
         WindowStyle="None"
+        Topmost="True"
         Background="Transparent"
         AllowsTransparency="True"
-        Closing="MainWindow_Closing"> 
-  <Window.Resources>
-    <SolidColorBrush x:Key="MediumGreyBrush" Color="#ff6e6e6e" />
-    <SolidColorBrush x:Key="KinectPurpleBrush" Color="#ff52318f" />
-    <SolidColorBrush x:Key="KinectBlueBrush" Color="#ff00BCF2" />
-    <Style TargetType="{x:Type Image}">
-      <Setter Property="SnapsToDevicePixels" Value="True" />
-    </Style>
-   
-  </Window.Resources>
-    <Grid Margin="10 0 10 0">
-    <Grid.RowDefinitions>
-      <RowDefinition Height="Auto" />
-      <RowDefinition Height="*" />
-      <RowDefinition Height="Auto" />
-      <RowDefinition Height="Auto" />
-    </Grid.RowDefinitions>
+        Closing="MainWindow_Closing">
+    <Window.Resources>
+        <SolidColorBrush x:Key="MediumGreyBrush" Color="#ff6e6e6e" />
+        <SolidColorBrush x:Key="PurpleBrush" Color="#ff83318f" />
+        <SolidColorBrush x:Key="GreenBrush" Color="#ff00BC00" />
+        <Style TargetType="{x:Type Image}">
+            <Setter Property="SnapsToDevicePixels" Value="True" />
+        </Style>
 
-        <Grid Grid.Row="0" Background="White">
-            <Image  Source="Images\Logo.png" HorizontalAlignment="Left" Stretch="Fill" Height="32" Width="81" Margin="275,5,0,10" />
-            <TextBlock Margin="0,0,108,13" HorizontalAlignment="Right" VerticalAlignment="Bottom" Foreground="{StaticResource KinectPurpleBrush}" FontFamily="Segoe UI" FontSize="18" RenderTransformOrigin="-0.098,0.507">HandMap</TextBlock>
-            <Button Width="47" Height="47" HorizontalAlignment="Right" RenderTransformOrigin="20.928,0.166" Click="Button_Close">x</Button>
+    </Window.Resources>
+    <Grid Margin="10 0 10 0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="490*" />
+            <RowDefinition Height="57*"/>
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" HorizontalAlignment="Center" Background="White" Width="358" Margin="248,0,421,0">
+            <Image  Source="Images\Logo.png" HorizontalAlignment="Left" Stretch="Fill" Height="32" Width="81" Margin="198,0,0,15" RenderTransformOrigin="2.044,1.18" />
+            <TextBlock Margin="0,0,52,0" HorizontalAlignment="Right" VerticalAlignment="Bottom" Foreground="{StaticResource PurpleBrush}" FontFamily="Segoe UI" FontSize="18" RenderTransformOrigin="-0.098,0.507">HandMap</TextBlock>
+            <Button Width="47" Height="47" HorizontalAlignment="Right" RenderTransformOrigin="20.928,0.166" Click="Button_Close">Exit</Button>
+            <StatusBarItem Content="{Binding StatusText}" Margin="0,0,115,0" HorizontalAlignment="Right" Width="184" Foreground="{StaticResource GreenBrush}"/>
         </Grid>
-    <Grid Grid.Row="1" HorizontalAlignment="Center">
-            <Image Source="{Binding DepthSource}" Stretch="UniformToFill" />            
+        <Grid Grid.Row="1" HorizontalAlignment="Center" Margin="0,0,0,0" Grid.RowSpan="2">
+            <Image Source="{Binding DepthSource}" Stretch="UniformToFill" />
             <Image Source="{Binding JointSource}" Stretch="UniformToFill"/>
-     </Grid>
+        </Grid>
 
 
         <!--<Viewbox Grid.Row="2" HorizontalAlignment="Center">
@@ -42,9 +44,5 @@
             </Grid>
         </Viewbox>-->
 
-
-        <StatusBar Grid.Row="3" HorizontalAlignment="Stretch" Name="statusBar" VerticalAlignment="Bottom" Background="White" Foreground="{StaticResource MediumGreyBrush}">
-      <StatusBarItem Content="{Binding StatusText}" />
-    </StatusBar>
-  </Grid>
+    </Grid>
 </Window>

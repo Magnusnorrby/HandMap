@@ -177,12 +177,12 @@ namespace Microsoft.Samples.Kinect.DepthBasics
         private DepthSpacePoint[] colorMappedToDepthPoints = null;
 
 
-
         /// <summary>
         /// Initializes a new instance of the MainWindow class.
         /// </summary>
         public MainWindow()
         {
+
             // get the kinectSensor object
             this.kinectSensor = KinectSensor.GetDefault();
 
@@ -790,6 +790,7 @@ namespace Microsoft.Samples.Kinect.DepthBasics
             }
 
         }
+
 
 
         /// <summary>
