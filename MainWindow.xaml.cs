@@ -353,7 +353,7 @@ namespace Microsoft.Samples.Kinect.DepthBasics
 
 
         /// <summary>
-        /// Execute shutdown tasks
+        /// Execute shutdown tasks. Called from the exit button
         /// </summary>
         /// <param name="sender">object sending the event</param>
         /// <param name="e">event arguments</param>

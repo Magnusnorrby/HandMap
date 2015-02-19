@@ -13,10 +13,37 @@
         <SolidColorBrush x:Key="MediumGreyBrush" Color="#ff6e6e6e" />
         <SolidColorBrush x:Key="PurpleBrush" Color="#ff83318f" />
         <SolidColorBrush x:Key="GreenBrush" Color="#ff00BC00" />
+        
+        <GradientStopCollection x:Key="MyGlassGradientStopsResource">
+            <GradientStop Color="WhiteSmoke" Offset="0.2" />
+            <GradientStop Color="Transparent" Offset="0.4" />
+            <GradientStop Color="WhiteSmoke" Offset="0.5" />
+            <GradientStop Color="Transparent" Offset="0.75" />
+            <GradientStop Color="WhiteSmoke" Offset="0.9" />
+            <GradientStop Color="Transparent" Offset="1" />
+        </GradientStopCollection>
+
+        <GradientStopCollection x:Key="MySteelGradientStopsResource">
+            <GradientStop Color="SteelBlue" Offset="0.2" />
+            <GradientStop Color="Transparent" Offset="0.4" />
+            <GradientStop Color="SteelBlue" Offset="0.5" />
+            <GradientStop Color="Transparent" Offset="0.75" />
+            <GradientStop Color="SteelBlue" Offset="0.9" />
+            <GradientStop Color="Transparent" Offset="1" />
+        </GradientStopCollection>
+
+        <LinearGradientBrush x:Key="MyGlassBrushResource"  
+   StartPoint="0,0" EndPoint="1,1" Opacity="0.75"  
+   GradientStops="{StaticResource MyGlassGradientStopsResource}" />
+
+        <LinearGradientBrush x:Key="MySteelBrushResource"  
+   StartPoint="0,0" EndPoint="1,1" Opacity="0.75"  
+   GradientStops="{StaticResource MySteelGradientStopsResource}" />
+
         <Style TargetType="{x:Type Image}">
             <Setter Property="SnapsToDevicePixels" Value="True" />
         </Style>
-
+        
     </Window.Resources>
     <Grid Margin="10 0 10 0">
         <Grid.RowDefinitions>
@@ -26,11 +53,24 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0" HorizontalAlignment="Center" Background="White" Width="358" Margin="248,0,421,0">
-            <Image  Source="Images\Logo.png" HorizontalAlignment="Left" Stretch="Fill" Height="32" Width="81" Margin="198,0,0,15" RenderTransformOrigin="2.044,1.18" />
-            <TextBlock Margin="0,0,52,0" HorizontalAlignment="Right" VerticalAlignment="Bottom" Foreground="{StaticResource PurpleBrush}" FontFamily="Segoe UI" FontSize="18" RenderTransformOrigin="-0.098,0.507">HandMap</TextBlock>
-            <Button Width="47" Height="47" HorizontalAlignment="Right" RenderTransformOrigin="20.928,0.166" Click="Button_Close">Exit</Button>
-            <StatusBarItem Content="{Binding StatusText}" Margin="0,0,115,0" HorizontalAlignment="Right" Width="184" Foreground="{StaticResource GreenBrush}"/>
+        <Grid Grid.Row="0" HorizontalAlignment="Center" Width="358" Margin="248,10,421,0">
+            <!-- Glass Rectangle -->
+            <Rectangle x:Name="glassCube" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" StrokeThickness="2" RadiusX="10" RadiusY="10" Opacity="1" Fill="{StaticResource MyGlassBrushResource}" RenderTransformOrigin="0.5,0.5">
+                <Rectangle.Stroke>
+                    <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
+                        <LinearGradientBrush.GradientStops>
+                            <GradientStop Offset="0.0" Color="LightBlue" />
+                            <GradientStop Offset="1.0" Color="Gray" />
+                        </LinearGradientBrush.GradientStops>
+                    </LinearGradientBrush>
+                </Rectangle.Stroke>
+            </Rectangle>
+            <!--<Image  Source="Images\Logo.png" HorizontalAlignment="Left" Stretch="Fill" Width="68" Margin="175,10,0,15" RenderTransformOrigin="2.044,1.18" />-->
+            <TextBlock Margin="0,0,103,19" HorizontalAlignment="Right" VerticalAlignment="Bottom" Foreground="{StaticResource PurpleBrush}" FontFamily="Segoe UI" FontSize="18" FontWeight="ExtraBold" RenderTransformOrigin="-0.098,0.507">HandMap</TextBlock>
+            <Button Width="47" Height="47" VerticalAlignment="Center" HorizontalAlignment="Right" Background="Transparent" RenderTransformOrigin="20.928,0.166" Click="Button_Close" BorderThickness="3" BorderBrush="{StaticResource MySteelBrushResource}" Margin="0,7,24,6" FontWeight="ExtraBold" FontSize="15">
+                Exit
+            </Button>
+            <StatusBarItem Content="{Binding StatusText}" Margin="0,0,115,0" HorizontalAlignment="Right" Width="216" Foreground="{StaticResource GreenBrush}"/>
         </Grid>
         <Grid Grid.Row="1" HorizontalAlignment="Center" Margin="0,0,0,0" Grid.RowSpan="2">
             <Image Source="{Binding DepthSource}" Stretch="UniformToFill" />
