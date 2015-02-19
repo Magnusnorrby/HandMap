@@ -209,7 +209,7 @@ namespace Microsoft.Samples.Kinect.DepthBasics
             this.colorMappedToDepthPoints = new DepthSpacePoint[colorFrameDescription.Width * colorFrameDescription.Height];
 
             // create the bitmap to display
-            this.colorBitmap = new WriteableBitmap(colorFrameDescription.Width, colorFrameDescription.Height, 96.0, 96.0, PixelFormats.Bgr32, null);
+            this.colorBitmap = new WriteableBitmap(colorFrameDescription.Width, colorFrameDescription.Height, 96.0, 96.0, PixelFormats.Bgra32, null);
 
             // open the reader for the depth frames
             this.depthFrameReader = this.kinectSensor.DepthFrameSource.OpenReader();
@@ -429,16 +429,21 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                         // verify data and write the new color frame data to the display bitmap
                         if ((colorFrameDescription.Width == this.colorBitmap.PixelWidth) && (colorFrameDescription.Height == this.colorBitmap.PixelHeight))
                         {
+
+
                             colorFrame.CopyConvertedFrameDataToIntPtr(
                                 this.colorBitmap.BackBuffer,
                                 (uint)(colorFrameDescription.Width * colorFrameDescription.Height * 4),
                                 ColorImageFormat.Bgra);
 
                             this.colorBitmap.AddDirtyRect(new Int32Rect(0, 0, this.colorBitmap.PixelWidth, this.colorBitmap.PixelHeight));
+
                         }
 
                         this.colorBitmap.Unlock();
                     }
+                    //ProcessColorFrameData();
+
                 }
             }
 
@@ -474,32 +479,32 @@ namespace Microsoft.Samples.Kinect.DepthBasics
             return c;
         }
 
-        ///// <summary>
-        ///// sets the color of a specific pixel
-        ///// </summary>
-        ///// <param name="colorbitmap">the rgb image</param>
-        ///// <param name="x">x coordiante in the rgb image</param>
-        ///// <param name="y">y coordiante in the rgb image</param>
-        //public void setColorAtPixel(WriteableBitmap colorbitmap, int x, int y)
-        //{
-        //    // check that the pixel is within range
-        //    if (x > colorbitmap.PixelWidth || x < 0 || y > colorbitmap.PixelHeight || y < 0)
-        //    {
-        //        return;
-        //    }
+        /// <summary>
+        /// sets the color of a specific pixel to transparent
+        /// </summary>
+        /// <param name="colorbitmap">the rgb image</param>
+        /// <param name="x">x coordiante in the rgb image</param>
+        /// <param name="y">y coordiante in the rgb image</param>
+        public void makePixelTransparent(WriteableBitmap colorbitmap, int x, int y)
+        {
+            // check that the pixel is within range
+            if (x > colorbitmap.PixelWidth || x < 0 || y > colorbitmap.PixelHeight || y < 0)
+            {
+                return;
+            }
 
-        //    IntPtr buffer = colorbitmap.BackBuffer;
-        //    int pos = y * colorbitmap.BackBufferStride + x * 4;
-        //    unsafe
-        //    {
-        //        byte* p_buffer = (byte*)buffer.ToPointer();
-        //        p_buffer[pos + 3] = 255; // A
-        //        p_buffer[pos + 2] = 0;//c.R;
-        //        p_buffer[pos + 1] = 0; // c.G;
-        //        p_buffer[pos] = 0;  // b
-        //    }
+            IntPtr buffer = colorbitmap.BackBuffer;
+            int pos = y * colorbitmap.BackBufferStride + x * 4;
+            unsafe
+            {
+                byte* p_buffer = (byte*)buffer.ToPointer();
+                p_buffer[pos + 3] = 0;  // A
+                p_buffer[pos + 2] = 0;  // R
+                p_buffer[pos + 1] = 0;  // G
+                p_buffer[pos] = 0;  // B
+            }
 
-        //}
+        }
 
 
         /// <summary>
@@ -633,7 +638,7 @@ namespace Microsoft.Samples.Kinect.DepthBasics
 
                                             break;
 
-                                        
+
                                         case JointType.HandLeft:
                                             trackingStates[1] = trackingState;
                                             if (trackingState == TrackingState.Tracked)
@@ -746,6 +751,50 @@ namespace Microsoft.Samples.Kinect.DepthBasics
 
             drawingContext.DrawLine(drawPen, jointPoints[jointType0], jointPoints[jointType1]);
         }
+
+        //private unsafe void ProcessColorFrameData()
+        //{        
+        //    // rectangle size
+        //    int s = 60;
+
+        //    //for depth coordinate conversion (3.75 for width and 2.54717 for height)
+        //    int xStart = (int)(rPalmPos.X * 3.75 - s * 3.75)       < this.colorBitmap.Width  ? (int)(rPalmPos.X * 3.75 - s * 3.75)       : (int)this.colorBitmap.Width;
+        //    int yStart = (int)(rPalmPos.Y * 2.54717 - s * 2.54717) < this.colorBitmap.Height ? (int)(rPalmPos.Y * 2.54717 - s * 2.54717) : (int)this.colorBitmap.Height;
+
+        //    if (xStart < 0)
+        //        xStart = 0;
+        //    if (yStart < 0)
+        //        yStart = 0;
+
+        //    extractDepthData(xStart, yStart, s);
+
+        //}
+
+        //private void extractDepthData(int xStart, int yStart, int s)
+        //{
+        //    //for depth coordinate conversion
+        //    float widthRatio  = this.depthFrameDescription.Width  / (float)this.colorBitmap.Width;
+        //    float heightRatio = this.depthFrameDescription.Height / (float)this.colorBitmap.Height;
+
+        //    int xEnd = xStart + s * 3.75    < this.colorBitmap.Width  ? (int)(xStart + s * 3.75)    : (int)this.colorBitmap.Width;
+        //    int yEnd = yStart + s * 2.54717 < this.colorBitmap.Height ? (int)(yStart + s * 2.54717) : (int)this.colorBitmap.Height;
+
+        //    for (int x = xStart; x < xEnd; x++)
+        //    {
+        //        for (int y = yStart; y < yEnd; y++)
+        //        {
+        //            //depth coordinates
+        //            int dx = (int)(x * widthRatio);
+        //            int dy = (int)(y * heightRatio);
+        //            if (this.depthPixels[dx + dy * this.depthFrameDescription.Width] == 7)
+        //            {
+        //                makePixelTransparent(this.colorBitmap, x, y);
+        //            }
+        //        }
+
+        //    }
+
+        //}
 
         /// <summary>
         /// Directly accesses the underlying image buffer of the DepthFrame to 
@@ -1040,7 +1089,7 @@ namespace Microsoft.Samples.Kinect.DepthBasics
             int xStart = (palmPosX - size) > 0 ? (palmPosX - size) : 0;
             int yStart = (palmPosY - size) > 0 ? (palmPosY - size) : 0;
             int xEnd = (xStart + size * 2) <= this.displayWidth ? xStart + size * 2 : this.displayWidth; // size *2 since we go from -size to size when we draw the rectangle
-            int yEnd = (yStart + size * 2) <= this.displayHeight ? yStart + size * 2 : this.displayHeight;
+            int yEnd = (yStart + size * 1.5) <= this.displayHeight ? (int) (yStart + size * 1.5) : this.displayHeight; // 1.5 since we dont want to go to far below the hand
             for (int x = xStart; x <= xEnd; x++)
             {
                 for (int y = yStart; y <= yEnd; y++)

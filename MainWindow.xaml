@@ -67,7 +67,7 @@
             </Rectangle>
             <!--<Image  Source="Images\Logo.png" HorizontalAlignment="Left" Stretch="Fill" Width="68" Margin="175,10,0,15" RenderTransformOrigin="2.044,1.18" />-->
             <TextBlock Margin="0,0,103,19" HorizontalAlignment="Right" VerticalAlignment="Bottom" Foreground="{StaticResource PurpleBrush}" FontFamily="Segoe UI" FontSize="18" FontWeight="ExtraBold" RenderTransformOrigin="-0.098,0.507">HandMap</TextBlock>
-            <Button Width="47" Height="47" VerticalAlignment="Center" HorizontalAlignment="Right" Background="Transparent" RenderTransformOrigin="20.928,0.166" Click="Button_Close" BorderThickness="3" BorderBrush="{StaticResource MySteelBrushResource}" Margin="0,7,24,6" FontWeight="ExtraBold" FontSize="15">
+            <Button Width="47" Height="47" VerticalAlignment="Center" HorizontalAlignment="Right" Background="WhiteSmoke" RenderTransformOrigin="20.928,0.166" Click="Button_Close" BorderThickness="3" BorderBrush="{StaticResource MySteelBrushResource}" Margin="0,7,24,6" FontWeight="ExtraBold" FontSize="15">
                 Exit
             </Button>
             <StatusBarItem Content="{Binding StatusText}" Margin="0,0,115,0" HorizontalAlignment="Right" Width="216" Foreground="{StaticResource GreenBrush}"/>
