@@ -558,8 +558,6 @@ namespace Microsoft.Samples.Kinect.DepthBasics
         private void Reader_BodyFrameArrived(object sender, BodyFrameArrivedEventArgs e)
         {
             bool dataReceived = false;
-            Color rHandColor = Color.FromArgb(0, 0, 0, 0);
-            Color lHandColor = Color.FromArgb(0, 0, 0, 0);
 
             using (BodyFrame bodyFrame = e.FrameReference.AcquireFrame())
             {
@@ -618,11 +616,6 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                                     DepthSpacePoint depthSpacePoint = this.coordinateMapper.MapCameraPointToDepthSpace(position);
                                     jointPoints[jointType] = new Point(depthSpacePoint.X, depthSpacePoint.Y);
 
-                                    //ColorSpacePoint colorSpacePoint;
-                                    //colorSpacePoint = this.coordinateMapper.MapCameraPointToColorSpace(position);
-                                    //new Point(colorSpacePoint.X,colorSpacePoint.Y);
-                                    //getColorFromPixel(this.depthBitmap, (int)colorSpacePoint.X, (int)colorSpacePoint.Y);
-
 
                                     switch (jointType)
                                     {
@@ -633,7 +626,6 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                                             if (trackingState == TrackingState.Tracked) //requiring the joint to be tracked saves jumpy behavior when Kinect guesses
                                             {
                                                 rPalmPos = new Point(depthSpacePoint.X, depthSpacePoint.Y);
-                                                rHandColor = getColorFromPixel(this.depthBitmap, (int)depthSpacePoint.X, (int)depthSpacePoint.Y);
                                             }
 
                                             break;
@@ -644,7 +636,6 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                                             if (trackingState == TrackingState.Tracked)
                                             {
                                                 lPalmPos = new Point(depthSpacePoint.X, depthSpacePoint.Y);
-                                                lHandColor = getColorFromPixel(this.depthBitmap, (int)depthSpacePoint.X, (int)depthSpacePoint.Y);
                                             }
                                             break;
 
@@ -1089,7 +1080,7 @@ namespace Microsoft.Samples.Kinect.DepthBasics
             int xStart = (palmPosX - size) > 0 ? (palmPosX - size) : 0;
             int yStart = (palmPosY - size) > 0 ? (palmPosY - size) : 0;
             int xEnd = (xStart + size * 2) <= this.displayWidth ? xStart + size * 2 : this.displayWidth; // size *2 since we go from -size to size when we draw the rectangle
-            int yEnd = (yStart + size * 1.5) <= this.displayHeight ? (int) (yStart + size * 1.5) : this.displayHeight; // 1.5 since we dont want to go to far below the hand
+            int yEnd = (yStart + size * 1.5) <= this.displayHeight ? (int)(yStart + size * 1.5) : this.displayHeight; // 1.5 since we dont want to go to far below the hand
             for (int x = xStart; x <= xEnd; x++)
             {
                 for (int y = yStart; y <= yEnd; y++)
@@ -1099,16 +1090,6 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                     {
                         // Get the depth for this pixel
                         ushort depth = frameData[i];
-
-                        //// map the coordinate to the color image
-                        //DepthSpacePoint dsp = new DepthSpacePoint();
-                        //dsp.X = x;
-                        //dsp.Y = y;
-                        //ColorSpacePoint colorPoint = coordinateMapper.MapDepthPointToColorSpace(dsp, depth);
-                        //int cX = (int) colorPoint.X;
-                        //int cY = (int) colorPoint.Y;
-                        //setColorAtPixel(this.colorBitmap, cX, cY);
-
 
                         //only colors pixels that are close in depth to our palm depth (depth / MapDepthToByte)
                         switch ((palmDepth - depth) / 25)
@@ -1144,28 +1125,6 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                 }
             }
 
-
-
-
-            //// draws the rectangle
-            //int safe = 0;
-
-            //for (int i = -size; i < size; i++)
-            //    {
-
-            //        safe = palmPosX + i + (palmPosY + size) * this.displayWidth;
-            //        if (safe > 0 & safe < frameDataLength & palmPosX + i < this.displayWidth & palmPosX + i> 0) // makes sure that all coordinates are within the screen
-            //            this.depthPixels[safe] = 5;
-            //        safe = palmPosX + i + (palmPosY - size) * this.displayWidth;
-            //        if (safe > 0 & safe < frameDataLength & palmPosX + i < this.displayWidth & palmPosX + i > 0)
-            //            this.depthPixels[safe] = 5;
-            //        safe = palmPosX + size + (palmPosY + i) * this.displayWidth;
-            //        if (safe > 0 & safe < frameDataLength & palmPosX + size < this.displayWidth & palmPosX + size > 0)
-            //            this.depthPixels[safe] = 5;
-            //        safe = palmPosX - size + (palmPosY - i) * this.displayWidth;
-            //        if (safe > 0 & safe < frameDataLength & palmPosX - size < this.displayWidth & palmPosX - size > 0)
-            //            this.depthPixels[safe] = 5;
-            //    }
 
         }
 
