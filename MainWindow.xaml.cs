@@ -197,10 +197,10 @@ namespace Microsoft.Samples.Kinect.DepthBasics
             this.displayHeight = frameDescription.Height;
 
             // open the reader for the color frames
-            this.colorFrameReader = this.kinectSensor.ColorFrameSource.OpenReader();
+            //this.colorFrameReader = this.kinectSensor.ColorFrameSource.OpenReader();
 
             // wire handler for frame arrival
-            this.colorFrameReader.FrameArrived += this.Reader_ColorFrameArrived;
+            //this.colorFrameReader.FrameArrived += this.Reader_ColorFrameArrived;
 
             // create the colorFrameDescription from the ColorFrameSource using Bgra format
             FrameDescription colorFrameDescription = this.kinectSensor.ColorFrameSource.CreateFrameDescription(ColorImageFormat.Bgra);
