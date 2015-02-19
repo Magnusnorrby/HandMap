@@ -224,12 +224,12 @@ namespace Microsoft.Samples.Kinect.DepthBasics
             this.depthPixels = new byte[this.depthFrameDescription.Width * this.depthFrameDescription.Height];
 
             List<Color> colorList = new List<Color>();
-            colorList.Add(Color.FromArgb(255, 0, 0, 255));
-            colorList.Add(Color.FromArgb(255, 0, 255, 0));
-            colorList.Add(Color.FromArgb(255, 70, 200, 0));
-            colorList.Add(Color.FromArgb(255, 100, 180, 0));
-            colorList.Add(Color.FromArgb(255, 200, 100, 0));
-            colorList.Add(Color.FromArgb(255, 230, 70, 0));
+            colorList.Add(Color.FromArgb(100, 0, 0, 255));
+            colorList.Add(Color.FromArgb(150, 0, 255, 0));
+            colorList.Add(Color.FromArgb(100, 70, 200, 0));
+            colorList.Add(Color.FromArgb(100, 100, 180, 0));
+            colorList.Add(Color.FromArgb(100, 200, 100, 0));
+            colorList.Add(Color.FromArgb(100, 230, 70, 0));
             colorList.Add(Color.FromArgb(255, 255, 0, 0));
             colorList.Add(Color.FromArgb(0, 0, 0, 0));
 
@@ -861,11 +861,11 @@ namespace Microsoft.Samples.Kinect.DepthBasics
             {
                 //index = wristPosX + (x * i / 20) + ((y * i / 20) + wristPosY) * this.displayWidth;  // a line crossing both the center of the wrist and the center of the palm
                 //if (index > 0 & index < range)
-                //    this.depthPixels[index] = 5; //color it red
+                //    this.depthPixels[index] = 6; //color it red
 
                 //index = wristPosX + d1 * (y * i / 20) + (d2 * (x * i / 20) + wristPosY) * this.displayWidth;
                 //if (index > 0 & index < range)
-                //    this.depthPixels[index] = 5; //color it red
+                //    this.depthPixels[index] = 6; //color it red
 
                 int tempX = 0;
                 int tempY = 0;
@@ -938,7 +938,7 @@ namespace Microsoft.Samples.Kinect.DepthBasics
 
                 //index = (int)palmPosX - (y * i / divi) + ((x * i / divi) + (int)palmPosY) * this.displayWidth; // a perpendicular line starting at the palm
                 //if (index > 0 & index < range)
-                //    this.depthPixels[index] = 5; //color it red
+                //    this.depthPixels[index] = 6; //color it red
 
                 int tempX = 0;
                 int tempY = 0;
@@ -951,7 +951,7 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                     index = tempX + tempY * this.displayWidth;
                     if (index > 0 & index < range)
                     {
-                        if (this.depthPixels[index] != 7 & this.depthPixels[index] != 5) //ignore black background and the red rectangle
+                        if (this.depthPixels[index] != 7) //ignore black background 
                         {
                             distArray[i + width] = j;
                             pointArray[i + width] = new Point(tempX, tempY);
@@ -976,7 +976,7 @@ namespace Microsoft.Samples.Kinect.DepthBasics
                 //{
                 //    index = (int)palmPosX + -(y * i / divi) + (x * (int)limit / divj) + ((x * i / divi) + (y * (int)limit / divj) + (int)palmPosY) * this.displayWidth;
                 //    if (index > 0 & index < range)
-                //        this.depthPixels[index] = 5; //color it red
+                //        this.depthPixels[index] = 6; //color it red
                 //}
 
                 for (int i = 0; i < 3; i++) //3 since the thumb has a different angle and the pinky is to short
@@ -1031,7 +1031,7 @@ namespace Microsoft.Samples.Kinect.DepthBasics
         private void drawFingerTip(int range, Point tip, byte color)
         {
 
-            int r = 5;
+            int r = 4;
             for (double i = 0; i < 2 * Math.PI; i += 0.1) // a circle around the furthest finger tip
             {
                 int index = (int)(tip.X + Math.Cos(i) * r) + (int)(tip.Y + Math.Sin(i) * r) * this.displayWidth; //three calls makes the circle thicker
@@ -1073,8 +1073,13 @@ namespace Microsoft.Samples.Kinect.DepthBasics
 
             ushort palmDepth = frameData[index];
 
-            // defines the size of the red rectangle
+            
+
+            // defines the size of the rectangle where we search
             int size = 60;
+
+            //used to make the edge of the rectangle look less sharp
+            Random rnd = new Random();
 
             // the bounds of the rectangle
             int xStart = (palmPosX - size) > 0 ? (palmPosX - size) : 0;
@@ -1083,7 +1088,8 @@ namespace Microsoft.Samples.Kinect.DepthBasics
             int yEnd = (yStart + size * 1.5) <= this.displayHeight ? (int)(yStart + size * 1.5) : this.displayHeight; // 1.5 since we dont want to go to far below the hand
             for (int x = xStart; x <= xEnd; x++)
             {
-                for (int y = yStart; y <= yEnd; y++)
+                int randomInt = rnd.Next(1, 10);
+                for (int y = yStart; y <= yEnd + randomInt; y++)
                 {
                     int i = x + y * this.displayWidth;
                     if (i < frameDataLength)
